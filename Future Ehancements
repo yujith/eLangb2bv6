@@ -1,0 +1,46 @@
+Super Admin
+- Ability to give cost effective LLM models depending on the type of client. 
+- Billing
+    - Abilty to set a start date for Billing
+
+- Give a limit of API calls per month per org. So the cost is saved to prevent unlimieted calls. Or a timeout to slow end users from over generating questions 
+
+
+Org Admin
+- The logo area should have a neutral colours so the colours won't clash
+- 
+
+
+
+Teacher
+
+
+
+Student
+
+Listening 
+- Voice based system speaking tests similar to chatGPT voice mode
+
+
+Future Enhancements
+
+Server is up at http://localhost:5173/
+
+Why this happens every time
+npm run dev starts a local development server — it's a temporary process, not a system service. When your Mac sleeps:
+
+macOS suspends/kills background terminal processes
+Node.js (Vite) loses its network socket
+When you wake up, the process is dead or zombie — port 5173 stops responding
+This is normal for any local dev server (Vite, Next.js, etc.). It's not a crash or a bug.
+
+Quick fix going forward
+Each time you open your Mac to work, just run this in your terminal:
+
+bash
+npm run dev
+If the port is stuck from a stale process, kill it first:
+
+bash
+pkill -f vite && npm run dev
+Or you can just ask me to "start the server" and I'll handle it.

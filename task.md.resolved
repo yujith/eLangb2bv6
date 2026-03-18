@@ -1,0 +1,78 @@
+# eLanguage Center B2B Platform – Master Task Tracker
+
+## Phase 1: Project Foundation
+- [x] Initialize Vite + React project
+- [x] Install dependencies (react-router-dom, @supabase/supabase-js, lucide-react)
+- [x] Set up CSS design system with eLanguage branding (Rubik font, red/black/grey palette)
+- [x] Create Supabase client config ([src/lib/supabase.js](file:///Users/yujithperera/Documents/eLangb2bv5/src/lib/supabase.js))
+
+## Phase 2: Database Schema & RLS
+- [x] Core tables: `organizations`, `profiles`, `licenses`
+- [x] Global Content Library tables: `global_content_items`, `global_question_sets`, `global_listening_audio`, `content_usage_log`
+- [x] Student data tables: `attempts`, `attempt_answers`, `writing_submissions`, `speaking_submissions`
+- [x] Apply Row-Level Security (RLS) policies for multi-tenant isolation
+- [x] Seed Super Admin user
+
+## Phase 3: Auth & Role-Based Routing
+- [x] AuthContext with Supabase session management
+- [x] Login page
+- [x] Role-based route guards (Super Admin, Org Admin, Teacher, Student)
+- [x] Dashboard layout with responsive sidebar
+
+## Phase 4: Super Admin Module
+- [x] Organization CRUD
+- [x] License quota management
+- [x] Global content governance (view, edit, retire content)
+- [x] AI cost monitoring dashboard
+- [x] Platform-wide analytics
+
+## Phase 5: Org Admin Module
+- [x] Organization profile & branding (logo, colors)
+- [x] User management (add/remove teachers & students)
+- [x] License assignment
+- [x] Student & teacher oversight dashboards
+- [x] Content preference mode setting
+
+## Phase 6: Global Content Library & Reuse Engine
+- [x] Content tagging & metadata system
+- [x] Reuse-first retrieval logic (search → match → reuse or generate)
+- [x] Content hashing for listening audio deduplication
+- [x] Usage tracking (increment counts, log access)
+- [x] Content status lifecycle (Draft → Active → Retired)
+
+## Phase 7: IELTS Modules – Student UI
+- [x] Reading module (passage + questions, timer, auto-mark)
+- [x] Writing module (prompt, text editor, word counter, timer)
+- [x] Listening module (audio player, questions, auto-mark)
+- [x] Speaking module (question display, recorder, playback)
+
+## Phase 8: AI Integration Layer
+- [x] AI passage & question generation (Reading)
+- [x] AI script & question generation (Listening)
+- [x] TTS audio generation with hash-based caching
+- [x] AI writing evaluation (band scoring, criterion feedback)
+- [x] Writing prompt generation
+
+## Phase 9: Teacher Module
+- [x] Writing review queue (view AI feedback, override, comment)
+- [x] Speaking review (playback, criterion grading)
+- [x] Student performance tracking
+- [x] Teacher Dashboard with real-time queue counts
+
+## Phase 10: Analytics & Cost Monitoring
+- [x] Student-level analytics (band progression, weakness heatmap)
+- [x] Organization-level analytics (averages, engagement)
+- [x] Platform-level analytics (revenue, AI usage, reuse rate)
+- [x] AI cost dashboard (tokens, TTS calls, reuse hit rate)
+- [x] Student attempt history with module filtering
+- [x] OrgAdmin reports with per-module breakdown
+
+## Phase 11: Verification & Polish
+- [x] Multi-tenancy isolation verification (RLS on all 12 tables, org-scoped policies confirmed)
+- [x] Role-based access verification (ProtectedRoute with allowedRoles on all route groups)
+- [x] Content reuse flow end-to-end test (hash-based dedup, search→reuse→generate→store in contentEngine.js)
+- [x] IELTS module flow tests (all 4 modules save attempts + answers/submissions correctly)
+- [x] UI responsiveness and branding consistency check (responsive breakpoints, mobile sidebar fix, design system variables)
+- [x] Student Dashboard, SuperAdmin Analytics, SuperAdmin Billing upgraded from placeholder to real data
+- [x] Mobile overlay bug fix in DashboardLayout
+- [x] Production build passes (exit 0, no errors)

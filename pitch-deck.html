@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eLanguage Center × British Council Sri Lanka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/white.min.css">
+    <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #ee2346;
+            --brand-red-light: #fce8ec;
+            --brand-red-dark: #c41d3a;
+            --text-dark: #1a1a2e;
+            --text-body: #444;
+            --text-muted: #888;
+            --bg-white: #ffffff;
+            --bg-light: #f7f7fa;
+            --bg-card: #ffffff;
+            --border-light: #e8e8ee;
+        }
+
+        .reveal {
+            font-family: 'Rubik', sans-serif;
+            color: var(--text-dark);
+        }
+
+        .reveal .slides section {
+            text-align: left;
+            padding: 30px 50px;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3 {
+            font-family: 'Rubik', sans-serif;
+            color: var(--text-dark);
+            text-transform: none;
+            letter-spacing: -0.02em;
+        }
+
+        .reveal h1 {
+            font-weight: 800;
+            font-size: 2em;
+            line-height: 1.1;
+            margin-bottom: 0.2em;
+        }
+
+        .reveal h2 {
+            font-weight: 700;
+            font-size: 0.80em;
+            line-height: 1.15;
+            margin-bottom: 0.25em;
+        }
+
+        .reveal h3 {
+            font-weight: 600;
+            font-size: 1em;
+            color: var(--brand-red);
+            margin-bottom: 0.2em;
+        }
+
+        .reveal p, .reveal li {
+            font-weight: 400;
+            font-size: 0.62em;
+            line-height: 1.5;
+            color: var(--text-body);
+        }
+
+        .reveal ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .reveal ul li {
+            position: relative;
+            padding-left: 1.4em;
+            margin-bottom: 0.3em;
+        }
+
+        .reveal ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.55em;
+            width: 8px;
+            height: 8px;
+            background: var(--brand-red);
+            border-radius: 2px;
+        }
+
+        /* Red accent bar at top of slides */
+        .reveal .slides section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--brand-red);
+        }
+
+        /* Tag / pill */
+        .tag {
+            display: inline-block;
+            background: var(--brand-red-light);
+            color: var(--brand-red);
+            font-size: 0.48em;
+            font-weight: 600;
+            padding: 3px 12px;
+            border-radius: 20px;
+            margin-bottom: 6px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        /* Stat cards */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .stat-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 12px 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stat-card .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            background: var(--brand-red-light);
+            color: var(--brand-red);
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.5em;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.2;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.55em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Feature grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .feature-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .feature-card h4 {
+            font-size: 0.7em;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 6px;
+        }
+
+        .feature-card p {
+            font-size: 0.55em;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .feature-card .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            background: var(--brand-red-light);
+            color: var(--brand-red);
+        }
+
+        /* Role cards */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .role-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-left: 4px solid var(--brand-red);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .role-card h4 {
+            font-size: 0.62em;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 3px;
+        }
+
+        .role-card p {
+            font-size: 0.46em;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Mockup container */
+        .mockup {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+
+        .mockup-bar {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-light);
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mockup-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+        }
+
+        .mockup-dot.red { background: #ff5f57; }
+        .mockup-dot.yellow { background: #ffbd2e; }
+        .mockup-dot.green { background: #28c840; }
+
+        .mockup-body {
+            padding: 16px;
+        }
+
+        /* Two column layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .two-col.text-left {
+            grid-template-columns: 1.1fr 0.9fr;
+        }
+
+        .two-col.text-right {
+            grid-template-columns: 0.9fr 1.1fr;
+        }
+
+        /* Stock image styling */
+        .stock-img {
+            border-radius: 14px;
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        /* Title slide */
+        .title-slide {
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title-slide .logo {
+            height: 70px;
+            margin-bottom: 20px;
+        }
+
+        .title-slide h1 {
+            font-size: 2.2em;
+            margin-bottom: 0.1em;
+        }
+
+        .title-slide .subtitle {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .title-slide .partnership {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 0.6em;
+            color: var(--text-muted);
+            margin-top: 30px;
+        }
+
+        .title-slide .partnership .divider {
+            width: 40px;
+            height: 2px;
+            background: var(--brand-red);
+        }
+
+        /* CTA slide */
+        .cta-slide {
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .cta-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 24px 18px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .cta-card .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand-red);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.7em;
+            margin: 0 auto 10px;
+        }
+
+        .cta-card h4 {
+            font-size: 0.65em;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 4px;
+        }
+
+        .cta-card p {
+            font-size: 0.5em;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Red bottom bar on slides */
+        .reveal .slides section::after {
+            content: 'eLanguage Center';
+            position: absolute;
+            bottom: 12px;
+            right: 60px;
+            font-size: 0.4em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Override for title/cta slides */
+        .title-slide::after, .cta-slide::after {
+            content: '' !important;
+        }
+
+        /* Flow diagram */
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .flow-box {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 10px 14px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            min-width: 120px;
+        }
+
+        .flow-box.highlight {
+            border-color: var(--brand-red);
+            background: var(--brand-red-light);
+        }
+
+        .flow-box h5 {
+            font-size: 0.55em;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0 0 2px;
+        }
+
+        .flow-box p {
+            font-size: 0.45em;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .flow-arrow {
+            font-size: 1.2em;
+            color: var(--brand-red);
+            font-weight: 700;
+        }
+
+        /* Icon list */
+        .icon-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .icon-list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+        }
+
+        .icon-list-item .il-icon {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--brand-red-light);
+            color: var(--brand-red);
+        }
+
+        .icon-list-item h5 {
+            font-size: 0.52em;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+        }
+
+        .icon-list-item p {
+            font-size: 0.42em;
+            color: var(--text-muted);
+            margin: 2px 0 0;
+            line-height: 1.35;
+        }
+
+        /* Mini mockup elements */
+        .mini-sidebar {
+            width: 50px;
+            background: var(--text-dark);
+            border-radius: 8px 0 0 8px;
+            padding: 10px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-sidebar .sb-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .mini-sidebar .sb-dot.active {
+            background: var(--brand-red);
+        }
+
+        .mini-stat-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .mini-stat {
+            flex: 1;
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .mini-stat .ms-val {
+            font-size: 0.9em;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .mini-stat .ms-lbl {
+            font-size: 0.4em;
+            color: var(--text-muted);
+        }
+
+        .mini-chart-bar {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 50px;
+            margin-top: 8px;
+        }
+
+        .mini-chart-bar div {
+            flex: 1;
+            border-radius: 4px 4px 0 0;
+            background: var(--brand-red-light);
+        }
+
+        .mini-chart-bar div:nth-child(1) { height: 60%; }
+        .mini-chart-bar div:nth-child(2) { height: 85%; background: var(--brand-red); }
+        .mini-chart-bar div:nth-child(3) { height: 45%; }
+        .mini-chart-bar div:nth-child(4) { height: 70%; background: var(--brand-red); opacity: 0.7; }
+        .mini-chart-bar div:nth-child(5) { height: 55%; }
+
+        /* Branding mockup */
+        .brand-compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .brand-box {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .brand-box-header {
+            padding: 12px 16px;
+            font-size: 0.5em;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-muted);
+        }
+
+        .brand-box-body {
+            padding: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .brand-mini-sidebar {
+            width: 36px;
+            border-radius: 6px;
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .brand-mini-sidebar div {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            opacity: 0.4;
+        }
+
+        .brand-mini-content {
+            flex: 1;
+        }
+
+        .brand-mini-content div {
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        /* Value prop list */
+        .value-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .value-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+        }
+
+        .value-item .vi-num {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            border-radius: 50%;
+            background: var(--brand-red);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55em;
+            font-weight: 700;
+        }
+
+        .value-item p {
+            font-size: 0.5em;
+            color: var(--text-dark);
+            font-weight: 500;
+            margin: 0;
+        }
+
+        /* Writing mockup specifics */
+        .essay-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .essay-lines div {
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+        }
+
+        .essay-lines div:nth-child(odd) { width: 100%; }
+        .essay-lines div:nth-child(even) { width: 85%; }
+
+        .feedback-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .feedback-score {
+            min-width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: var(--brand-red);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5em;
+            font-weight: 700;
+        }
+
+        .feedback-label {
+            font-size: 0.45em;
+            color: var(--text-body);
+        }
+
+        /* Audio player mockup */
+        .audio-mockup {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .play-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--brand-red);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-btn::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 10px solid white;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            margin-left: 2px;
+        }
+
+        .audio-wave {
+            flex: 1;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .audio-wave div {
+            flex: 1;
+            background: var(--brand-red-light);
+            border-radius: 2px;
+        }
+
+        .audio-wave div:nth-child(1) { height: 8px; }
+        .audio-wave div:nth-child(2) { height: 16px; background: var(--brand-red); opacity: 0.6; }
+        .audio-wave div:nth-child(3) { height: 24px; background: var(--brand-red); }
+        .audio-wave div:nth-child(4) { height: 12px; }
+        .audio-wave div:nth-child(5) { height: 20px; background: var(--brand-red); opacity: 0.7; }
+        .audio-wave div:nth-child(6) { height: 10px; }
+        .audio-wave div:nth-child(7) { height: 18px; background: var(--brand-red); opacity: 0.5; }
+        .audio-wave div:nth-child(8) { height: 6px; }
+
+        /* Recording mockup */
+        .rec-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--brand-red);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            box-shadow: 0 0 0 8px var(--brand-red-light);
+        }
+
+        .rec-btn::after {
+            content: '';
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        /* Question mockup */
+        .q-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .q-num {
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.45em;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .q-text {
+            flex: 1;
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+        }
+
+        .q-answer {
+            width: 40px;
+            height: 6px;
+            background: var(--brand-red-light);
+            border-radius: 3px;
+        }
+
+        /* Highlight number */
+        .big-num {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: var(--brand-red);
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- ======================= SLIDE 1: TITLE ======================= -->
+            <section class="title-slide" data-background-color="#ffffff">
+                <img src="Branding/Logo-01.svg" alt="eLanguage Center" class="logo">
+                <h1>eLanguage Center</h1>
+                <p class="subtitle">AI-Powered IELTS Preparation at Scale</p>
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=900&h=300&fit=crop&crop=center" 
+                     alt="Students collaborating" 
+                     style="border-radius: 14px; width: 700px; max-width: 90%; height: 160px; object-fit: cover; box-shadow: 0 8px 30px rgba(0,0,0,0.1);">
+                <div class="partnership">
+                    <span>eLanguage Center</span>
+                    <span class="divider"></span>
+                    <span>British Council Sri Lanka</span>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 2: THE PROBLEM ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">The Challenge</span>
+                        <h2>IELTS Preparation<br>Doesn't Scale</h2>
+                        <ul>
+                            <li>Traditional prep is <strong>expensive</strong> and inconsistent in quality</li>
+                            <li>Teachers are <strong>overwhelmed</strong> grading Writing &amp; Speaking</li>
+                            <li>Students lack <strong>24/7 access</strong> to realistic practice tests</li>
+                            <li>Institutions have <strong>no visibility</strong> into student performance data</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&h=400&fit=crop" 
+                             alt="Student studying" class="stock-img">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 3: THE SOLUTION ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-right">
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=600&h=400&fit=crop" 
+                             alt="Student on laptop" class="stock-img">
+                    </div>
+                    <div>
+                        <span class="tag">The Solution</span>
+                        <h2>Meet eLanguage Center</h2>
+                        <ul>
+                            <li><strong>AI-powered</strong>, white-label B2B IELTS preparation platform</li>
+                            <li>All <strong>4 IELTS modules</strong>: Reading, Writing, Listening, Speaking</li>
+                            <li>Supports both <strong>Academic &amp; General Training</strong></li>
+                            <li><strong>Instant AI grading</strong> with teacher review workflow</li>
+                            <li><strong>White-label</strong> — your brand, your students</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 4: PLATFORM ARCHITECTURE ======================= -->
+            <section data-background-color="#ffffff">
+                <span class="tag">Platform Overview</span>
+                <h2>Built for Every Stakeholder</h2>
+                <p style="margin-bottom: 10px;">Three dedicated portals, each tailored to its user's needs.</p>
+                <div class="role-grid">
+                    <div class="role-card">
+                        <div style="font-size: 1.4em; margin-bottom: 8px;">
+                            <i data-lucide="shield-check" style="color: var(--brand-red); width: 28px; height: 28px;"></i>
+                        </div>
+                        <h4>Organisation Admin</h4>
+                        <p>British Council staff manage users, monitor performance, handle billing, and customise branding — all from one dashboard.</p>
+                    </div>
+                    <div class="role-card">
+                        <div style="font-size: 1.4em; margin-bottom: 8px;">
+                            <i data-lucide="user-check" style="color: var(--brand-red); width: 28px; height: 28px;"></i>
+                        </div>
+                        <h4>Teacher</h4>
+                        <p>Review student Writing &amp; Speaking submissions, provide expert feedback, and track student progress over time.</p>
+                    </div>
+                    <div class="role-card">
+                        <div style="font-size: 1.4em; margin-bottom: 8px;">
+                            <i data-lucide="graduation-cap" style="color: var(--brand-red); width: 28px; height: 28px;"></i>
+                        </div>
+                        <h4>Student</h4>
+                        <p>Practice all 4 IELTS modules with AI-generated content, get instant feedback, and track progress toward their target band.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 5: STUDENT DASHBOARD ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">Student Portal</span>
+                        <h2>Personalised Dashboard</h2>
+                        <ul>
+                            <li>At-a-glance <strong>performance overview</strong>: overall band, best band, study hours</li>
+                            <li>Quick access to all <strong>4 practice modules</strong></li>
+                            <li><strong>Recent attempts</strong> with scores and trends</li>
+                            <li>Progress tracking toward <strong>target band score</strong></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body" style="display: flex; gap: 8px;">
+                                <div class="mini-sidebar">
+                                    <div class="sb-dot active"></div>
+                                    <div class="sb-dot"></div>
+                                    <div class="sb-dot"></div>
+                                    <div class="sb-dot"></div>
+                                    <div class="sb-dot"></div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div class="mini-stat-row">
+                                        <div class="mini-stat">
+                                            <div class="ms-val">7.0</div>
+                                            <div class="ms-lbl">Overall Band</div>
+                                        </div>
+                                        <div class="mini-stat">
+                                            <div class="ms-val">7.5</div>
+                                            <div class="ms-lbl">Best Band</div>
+                                        </div>
+                                        <div class="mini-stat">
+                                            <div class="ms-val">24</div>
+                                            <div class="ms-lbl">Tests Taken</div>
+                                        </div>
+                                        <div class="mini-stat">
+                                            <div class="ms-val">18h</div>
+                                            <div class="ms-lbl">Study Hours</div>
+                                        </div>
+                                    </div>
+                                    <div class="mini-chart-bar">
+                                        <div></div><div></div><div></div><div></div><div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 6: READING MODULE ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-right">
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex: 1;">
+                                        <div style="height: 6px; background: #ddd; border-radius: 3px; margin-bottom: 5px; width: 60%;"></div>
+                                        <div class="essay-lines">
+                                            <div></div><div></div><div></div><div></div><div></div><div></div>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.4em; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">QUESTIONS</div>
+                                        <div class="q-item"><div class="q-num">1</div><div class="q-text"></div><div class="q-answer"></div></div>
+                                        <div class="q-item"><div class="q-num">2</div><div class="q-text"></div><div class="q-answer"></div></div>
+                                        <div class="q-item"><div class="q-num">3</div><div class="q-text"></div><div class="q-answer"></div></div>
+                                        <div class="q-item"><div class="q-num">4</div><div class="q-text"></div><div class="q-answer"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="tag">Reading</span>
+                        <h2>Realistic Reading Tests</h2>
+                        <ul>
+                            <li><strong>Academic &amp; General Training</strong> modes</li>
+                            <li>3 passage difficulty levels (Passage 1–3)</li>
+                            <li><strong>8 IELTS question types</strong>: MCQ, True/False/Not Given, Yes/No/Not Given, Matching, Fill-in-the-blank, and more</li>
+                            <li>Configurable difficulty: <strong>Band 4–5, 6–7, 8–9</strong></li>
+                            <li>Timed <strong>20-minute tests</strong> with auto-scoring</li>
+                            <li>Detailed <strong>answer review</strong> after completion</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 7: WRITING MODULE ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">Writing</span>
+                        <h2>AI-Graded Writing Practice</h2>
+                        <ul>
+                            <li><strong>Task 1 Academic</strong>: AI-generated charts, graphs, tables, maps, process diagrams</li>
+                            <li><strong>Task 1 General</strong>: Formal, semi-formal, and informal letter prompts</li>
+                            <li><strong>Task 2</strong>: Essay prompts on exam-relevant topics</li>
+                            <li>Real-time <strong>word count</strong> and timed writing</li>
+                            <li><strong>AI grading</strong> on all 4 IELTS Writing criteria</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body">
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.4em; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">YOUR ESSAY</div>
+                                        <div class="essay-lines">
+                                            <div></div><div></div><div></div><div></div><div></div>
+                                        </div>
+                                        <div style="font-size: 0.38em; color: var(--text-muted); margin-top: 8px;">Words: 247 / 250</div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.4em; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;">AI FEEDBACK</div>
+                                        <div class="feedback-item">
+                                            <div class="feedback-score">7.0</div>
+                                            <div class="feedback-label">Task Response</div>
+                                        </div>
+                                        <div class="feedback-item">
+                                            <div class="feedback-score">6.5</div>
+                                            <div class="feedback-label">Coherence &amp; Cohesion</div>
+                                        </div>
+                                        <div class="feedback-item">
+                                            <div class="feedback-score">7.0</div>
+                                            <div class="feedback-label">Lexical Resource</div>
+                                        </div>
+                                        <div class="feedback-item">
+                                            <div class="feedback-score">6.5</div>
+                                            <div class="feedback-label">Grammar Range</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 8: LISTENING MODULE ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-right">
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body">
+                                <div class="audio-mockup">
+                                    <div class="play-btn"></div>
+                                    <div class="audio-wave">
+                                        <div></div><div></div><div></div><div></div>
+                                        <div></div><div></div><div></div><div></div>
+                                    </div>
+                                    <div style="font-size: 0.4em; color: var(--text-muted); font-weight: 600;">2:34</div>
+                                </div>
+                                <div style="font-size: 0.38em; color: var(--brand-red); font-weight: 600; text-align: center; margin-bottom: 8px;">
+                                    Plays remaining: 2 / 2
+                                </div>
+                                <div class="q-item"><div class="q-num">1</div><div class="q-text"></div><div class="q-answer"></div></div>
+                                <div class="q-item"><div class="q-num">2</div><div class="q-text"></div><div class="q-answer"></div></div>
+                                <div class="q-item"><div class="q-num">3</div><div class="q-text"></div><div class="q-answer"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="tag">Listening</span>
+                        <h2>AI-Generated Listening Tests</h2>
+                        <ul>
+                            <li><strong>4 IELTS sections</strong>: social conversations, monologues, academic discussions, lectures</li>
+                            <li>AI-generated scripts with <strong>ElevenLabs text-to-speech</strong> audio</li>
+                            <li><strong>2-play limit</strong> matching real IELTS exam conditions</li>
+                            <li>MCQ, matching, and fill-in-the-blank questions</li>
+                            <li>Auto-scoring with detailed <strong>answer review</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 9: SPEAKING MODULE ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">Speaking</span>
+                        <h2>Speaking Practice &amp; Review</h2>
+                        <ul>
+                            <li><strong>Parts 1, 2, and 3</strong> with authentic IELTS-style questions</li>
+                            <li>Part 2 <strong>cue cards</strong> with preparation time and bullet points</li>
+                            <li><strong>In-browser audio recording</strong> — no external software needed</li>
+                            <li>Recordings submitted for <strong>teacher review &amp; grading</strong></li>
+                            <li>Human feedback ensures <strong>nuanced evaluation</strong></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body" style="text-align: center; padding: 20px;">
+                                <div style="background: var(--bg-white); border: 1px solid var(--border-light); border-radius: 10px; padding: 14px; margin-bottom: 14px; text-align: left;">
+                                    <div style="font-size: 0.4em; color: var(--brand-red); font-weight: 600; margin-bottom: 4px;">Part 2 — Cue Card</div>
+                                    <div style="font-size: 0.48em; color: var(--text-dark); font-weight: 600; margin-bottom: 4px;">Describe a book you recently read</div>
+                                    <div style="font-size: 0.38em; color: var(--text-muted); line-height: 1.5;">
+                                        You should say:<br>
+                                        • what the book was about<br>
+                                        • why you chose to read it<br>
+                                        • what you learned from it
+                                    </div>
+                                </div>
+                                <div class="rec-btn"></div>
+                                <div style="font-size: 0.4em; color: var(--brand-red); font-weight: 600; margin-top: 10px;">Recording... 1:24</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 10: AI ENGINE ======================= -->
+            <section data-background-color="#ffffff">
+                <span class="tag">Technology</span>
+                <h2>Smart AI Engine — Reuse-First Strategy</h2>
+                <p style="margin-bottom: 8px;">Content is generated once and reused forever, dramatically reducing costs.</p>
+
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <h5>Student Requests Content</h5>
+                        <p>Reading / Writing / Listening / Speaking</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box highlight">
+                        <h5>Check Global Library</h5>
+                        <p>Hash-based deduplication</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">
+                        <h5>Content Found?</h5>
+                        <p>Reuse instantly (zero cost)</p>
+                    </div>
+                </div>
+                <div class="flow-row">
+                    <div class="flow-box">
+                        <h5>Not Found?</h5>
+                        <p>Generate via OpenAI / ElevenLabs</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box highlight">
+                        <h5>Store in Library</h5>
+                        <p>Available for all future students</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">
+                        <h5>80%+ Reuse Rate</h5>
+                        <p>Cost drops over time</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 16px; margin-top: 12px;">
+                    <div class="stat-card" style="flex: 1;">
+                        <div class="stat-value" style="color: var(--brand-red);">80%+</div>
+                        <div class="stat-label">Target Reuse Rate</div>
+                    </div>
+                    <div class="stat-card" style="flex: 1;">
+                        <div class="stat-value" style="color: var(--brand-red);">∞</div>
+                        <div class="stat-label">Audio Cache Lifetime</div>
+                    </div>
+                    <div class="stat-card" style="flex: 1;">
+                        <div class="stat-value" style="color: var(--brand-red);">$0</div>
+                        <div class="stat-label">Cost per Reuse</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 11: TEACHER PORTAL ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-right">
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body">
+                                <div style="font-size: 0.4em; color: var(--text-muted); font-weight: 600; margin-bottom: 8px;">WRITING REVIEW QUEUE</div>
+                                <div style="display: flex; gap: 8px;">
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.38em; color: var(--text-muted); margin-bottom: 4px;">Student Essay</div>
+                                        <div class="essay-lines">
+                                            <div></div><div></div><div></div><div></div>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.38em; color: var(--brand-red); margin-bottom: 4px; font-weight: 600;">AI Feedback</div>
+                                        <div class="feedback-item">
+                                            <div class="feedback-score" style="font-size: 0.4em;">7.0</div>
+                                            <div class="feedback-label" style="font-size: 0.38em;">Task Response</div>
+                                        </div>
+                                        <div class="feedback-item">
+                                            <div class="feedback-score" style="font-size: 0.4em;">6.5</div>
+                                            <div class="feedback-label" style="font-size: 0.38em;">Coherence</div>
+                                        </div>
+                                        <div style="font-size: 0.38em; color: var(--text-dark); margin-top: 8px; font-weight: 600;">Your Review</div>
+                                        <div style="background: var(--bg-light); border-radius: 6px; height: 30px; margin-top: 4px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="tag">Teacher Portal</span>
+                        <h2>AI-Assisted Teacher Review</h2>
+                        <ul>
+                            <li><strong>Writing review queue</strong>: essays displayed side-by-side with AI feedback</li>
+                            <li><strong>Speaking review</strong>: listen to recordings and assign band scores</li>
+                            <li>Grade on all <strong>4 IELTS criteria</strong> per module</li>
+                            <li>AI serves as <strong>first-pass grader</strong> — teachers confirm or override</li>
+                            <li><strong>Student progress tracking</strong> for the whole class</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 12: ORG ADMIN PORTAL ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">Admin Portal</span>
+                        <h2>Full Control for<br>British Council</h2>
+                        <ul>
+                            <li><strong>Dashboard</strong>: students, teachers, avg band, tests taken, per-module breakdown</li>
+                            <li><strong>User management</strong>: create teachers &amp; students, toggle licenses, activate/deactivate</li>
+                            <li><strong>Performance reports</strong> with module-level analytics</li>
+                            <li><strong>Billing &amp; payments</strong> portal with invoice history</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body" style="display: flex; gap: 8px;">
+                                <div class="mini-sidebar">
+                                    <div class="sb-dot active"></div>
+                                    <div class="sb-dot"></div>
+                                    <div class="sb-dot"></div>
+                                    <div class="sb-dot"></div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div class="mini-stat-row">
+                                        <div class="mini-stat">
+                                            <div class="ms-val">142</div>
+                                            <div class="ms-lbl">Students</div>
+                                        </div>
+                                        <div class="mini-stat">
+                                            <div class="ms-val">8</div>
+                                            <div class="ms-lbl">Teachers</div>
+                                        </div>
+                                        <div class="mini-stat">
+                                            <div class="ms-val">6.8</div>
+                                            <div class="ms-lbl">Avg Band</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <div style="flex: 1;">
+                                            <div class="mini-chart-bar">
+                                                <div></div><div></div><div></div><div></div><div></div>
+                                            </div>
+                                            <div style="font-size: 0.35em; color: var(--text-muted); text-align: center; margin-top: 4px;">Module Performance</div>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="text-align: center;">
+                                                <div style="font-size: 1.2em; font-weight: 800; color: var(--brand-red);">847</div>
+                                                <div style="font-size: 0.35em; color: var(--text-muted);">Total Tests</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 13: WHITE-LABEL BRANDING ======================= -->
+            <section data-background-color="#ffffff">
+                <span class="tag">Customisation</span>
+                <h2>Your Brand, Your Platform</h2>
+                <p style="margin-bottom: 10px;">Every student sees the British Council brand — not eLanguage Center.</p>
+
+                <div class="brand-compare">
+                    <div class="brand-box">
+                        <div class="brand-box-header">Default Platform</div>
+                        <div class="brand-box-body">
+                            <div class="brand-mini-sidebar" style="background: #1a1a2e;">
+                                <div style="background: var(--brand-red);"></div>
+                                <div style="background: rgba(255,255,255,0.2);"></div>
+                                <div style="background: rgba(255,255,255,0.2);"></div>
+                            </div>
+                            <div class="brand-mini-content">
+                                <div style="width: 50%; background: #1a1a2e; height: 10px;"></div>
+                                <div style="width: 100%; background: #eee;"></div>
+                                <div style="width: 80%; background: #eee;"></div>
+                                <div style="width: 30%; background: var(--brand-red); height: 10px; border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="brand-box" style="border-color: #2e3192;">
+                        <div class="brand-box-header" style="color: #2e3192; font-weight: 700;">✦ British Council Branded</div>
+                        <div class="brand-box-body">
+                            <div class="brand-mini-sidebar" style="background: #2e3192;">
+                                <div style="background: #fff;"></div>
+                                <div style="background: rgba(255,255,255,0.3);"></div>
+                                <div style="background: rgba(255,255,255,0.3);"></div>
+                            </div>
+                            <div class="brand-mini-content">
+                                <div style="width: 50%; background: #2e3192; height: 10px;"></div>
+                                <div style="width: 100%; background: #eee;"></div>
+                                <div style="width: 80%; background: #eee;"></div>
+                                <div style="width: 30%; background: #2e3192; height: 10px; border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-grid" style="margin-top: 10px;">
+                    <div class="feature-card">
+                        <h4>Custom Logo</h4>
+                        <p>Upload your British Council logo — displayed in sidebar and all student views</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Brand Colours</h4>
+                        <p>Set primary &amp; secondary colours with live preview before publishing</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 14: ANALYTICS & REPORTING ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-right">
+                    <div>
+                        <div class="mockup">
+                            <div class="mockup-bar">
+                                <div class="mockup-dot red"></div>
+                                <div class="mockup-dot yellow"></div>
+                                <div class="mockup-dot green"></div>
+                            </div>
+                            <div class="mockup-body">
+                                <div class="mini-stat-row">
+                                    <div class="mini-stat">
+                                        <div class="ms-val" style="color: var(--brand-red);">6.8</div>
+                                        <div class="ms-lbl">Avg Band</div>
+                                    </div>
+                                    <div class="mini-stat">
+                                        <div class="ms-val" style="color: var(--brand-red);">67%</div>
+                                        <div class="ms-lbl">Band 6.5+</div>
+                                    </div>
+                                    <div class="mini-stat">
+                                        <div class="ms-val" style="color: var(--brand-red);">118</div>
+                                        <div class="ms-lbl">Active</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                    <div style="flex: 1; text-align: center;">
+                                        <div style="font-size: 0.38em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Reading</div>
+                                        <div style="font-size: 0.7em; font-weight: 800; color: var(--text-dark);">7.2</div>
+                                    </div>
+                                    <div style="flex: 1; text-align: center;">
+                                        <div style="font-size: 0.38em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Writing</div>
+                                        <div style="font-size: 0.7em; font-weight: 800; color: var(--text-dark);">6.5</div>
+                                    </div>
+                                    <div style="flex: 1; text-align: center;">
+                                        <div style="font-size: 0.38em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Listening</div>
+                                        <div style="font-size: 0.7em; font-weight: 800; color: var(--text-dark);">7.0</div>
+                                    </div>
+                                    <div style="flex: 1; text-align: center;">
+                                        <div style="font-size: 0.38em; color: var(--text-muted); font-weight: 600; margin-bottom: 4px;">Speaking</div>
+                                        <div style="font-size: 0.7em; font-weight: 800; color: var(--text-dark);">6.3</div>
+                                    </div>
+                                </div>
+                                <div class="mini-chart-bar" style="margin-top: 10px;">
+                                    <div></div><div></div><div></div><div></div><div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="tag">Analytics</span>
+                        <h2>Data-Driven Decisions</h2>
+                        <ul>
+                            <li><strong>Student-level analytics</strong>: module breakdown, trends, strongest/weakest modules</li>
+                            <li><strong>Organisation-level reports</strong>: avg band, Band 6.5+ count, active students</li>
+                            <li><strong>Attempt history</strong> with dates, durations, and band per module</li>
+                            <li>Identify <strong>at-risk students</strong> before exam day</li>
+                            <li>Inform <strong>curriculum improvements</strong> with real data</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 15: BILLING & LICENSING ======================= -->
+            <section data-background-color="#ffffff">
+                <span class="tag">Billing</span>
+                <h2>Flexible Licensing &amp; Billing</h2>
+                <p style="margin-bottom: 8px;">Simple per-student licensing with flexible billing to suit your needs.</p>
+
+                <div class="icon-list">
+                    <div class="icon-list-item">
+                        <div class="il-icon">
+                            <i data-lucide="users" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div>
+                            <h5>Per-Student Licensing</h5>
+                            <p>Pay only for active students. Toggle licenses on/off anytime.</p>
+                        </div>
+                    </div>
+                    <div class="icon-list-item">
+                        <div class="il-icon">
+                            <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div>
+                            <h5>Flexible Billing Cycles</h5>
+                            <p>Monthly, quarterly, or annual billing frequency.</p>
+                        </div>
+                    </div>
+                    <div class="icon-list-item">
+                        <div class="il-icon">
+                            <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div>
+                            <h5>Auto-Generated Invoices</h5>
+                            <p>Tax &amp; discount support. Full invoice history in the portal.</p>
+                        </div>
+                    </div>
+                    <div class="icon-list-item">
+                        <div class="il-icon">
+                            <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
+                        </div>
+                        <div>
+                            <h5>Stripe Integration</h5>
+                            <p>Secure online payments. Credit &amp; grace periods supported.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 16: SECURITY & INFRASTRUCTURE ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">Infrastructure</span>
+                        <h2>Enterprise-Grade Security</h2>
+                        <p style="margin-bottom: 10px;">Built on modern, battle-tested infrastructure.</p>
+
+                        <div class="icon-list" style="grid-template-columns: 1fr;">
+                            <div class="icon-list-item">
+                                <div class="il-icon">
+                                    <i data-lucide="database" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div>
+                                    <h5>Supabase (PostgreSQL)</h5>
+                                    <p>Enterprise-grade backend with real-time capabilities</p>
+                                </div>
+                            </div>
+                            <div class="icon-list-item">
+                                <div class="il-icon">
+                                    <i data-lucide="lock" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div>
+                                    <h5>Row-Level Security</h5>
+                                    <p>Students only see their own data. Complete data isolation.</p>
+                                </div>
+                            </div>
+                            <div class="icon-list-item">
+                                <div class="il-icon">
+                                    <i data-lucide="shield" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div>
+                                    <h5>Role-Based Access Control</h5>
+                                    <p>4 distinct roles with granular permissions</p>
+                                </div>
+                            </div>
+                            <div class="icon-list-item">
+                                <div class="il-icon">
+                                    <i data-lucide="key" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div>
+                                    <h5>Secure Authentication</h5>
+                                    <p>Session management with automatic token refresh</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600&h=500&fit=crop" 
+                             alt="Security" class="stock-img">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 17: WHY PARTNER ======================= -->
+            <section data-background-color="#ffffff">
+                <div class="two-col text-left">
+                    <div>
+                        <span class="tag">Partnership</span>
+                        <h2>Why British Council + eLanguage Center?</h2>
+
+                        <div class="value-grid" style="grid-template-columns: 1fr;">
+                            <div class="value-item">
+                                <div class="vi-num">1</div>
+                                <p><strong>Scale</strong> IELTS prep to hundreds of students without proportional teacher hires</p>
+                            </div>
+                            <div class="value-item">
+                                <div class="vi-num">2</div>
+                                <p><strong>24/7 availability</strong> — students practice anytime, anywhere</p>
+                            </div>
+                            <div class="value-item">
+                                <div class="vi-num">3</div>
+                                <p><strong>AI handles 80%+</strong> of the grading workload — teachers focus on what matters</p>
+                            </div>
+                            <div class="value-item">
+                                <div class="vi-num">4</div>
+                                <p><strong>Your brand throughout</strong> — maintains British Council brand equity</p>
+                            </div>
+                            <div class="value-item">
+                                <div class="vi-num">5</div>
+                                <p><strong>Real-time analytics</strong> to track cohort performance &amp; identify at-risk students</p>
+                            </div>
+                            <div class="value-item">
+                                <div class="vi-num">6</div>
+                                <p><strong>Cost-efficient</strong> — content reuse means lower per-student cost over time</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&h=500&fit=crop" 
+                             alt="Students celebrating" class="stock-img">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================= SLIDE 18: NEXT STEPS / CTA ======================= -->
+            <section class="cta-slide" data-background-color="#ffffff">
+                <img src="Branding/Logo-01.svg" alt="eLanguage Center" style="height: 55px; margin-bottom: 16px;">
+                <h2 style="text-align: center;">Let's Get Started</h2>
+                <p style="text-align: center; max-width: 550px; margin: 0 auto 24px;">
+                    We propose a pilot programme to demonstrate the platform's value with your students.
+                </p>
+
+                <div class="cta-grid">
+                    <div class="cta-card">
+                        <div class="step-num">1</div>
+                        <h4>Pilot Programme</h4>
+                        <p>50 students, 1 month<br>Full platform access</p>
+                    </div>
+                    <div class="cta-card">
+                        <div class="step-num">2</div>
+                        <h4>Onboarding</h4>
+                        <p>Dedicated setup + training<br>for your teachers &amp; admins</p>
+                    </div>
+                    <div class="cta-card">
+                        <div class="step-num">3</div>
+                        <h4>Scale Together</h4>
+                        <p>Custom billing arrangement<br>Roll out to all students</p>
+                    </div>
+                </div>
+
+                
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            width: 1100,
+            height: 700,
+            margin: 0.04,
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'slide',
+            center: false,
+            controls: true,
+            controlsLayout: 'bottom-right',
+            progress: true,
+            slideNumber: true,
+        });
+
+        // Initialize Lucide icons after reveal loads
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+
+        // Also try after a short delay for CDN loading
+        setTimeout(() => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
