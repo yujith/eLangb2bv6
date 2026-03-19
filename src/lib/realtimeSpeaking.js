@@ -143,7 +143,7 @@ export function createRealtimeSession(callbacks = {}) {
                             type: 'server_vad',
                             threshold: 0.6,
                             prefix_padding_ms: 300,
-                            silence_duration_ms: 5400,
+                            silence_duration_ms: 4860,
                         },
                     },
                 }));
