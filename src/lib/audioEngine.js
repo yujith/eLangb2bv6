@@ -4,7 +4,8 @@
  */
 
 import { supabase } from './supabase';
-import { generateTTSAudio } from './aiService';
+import { generateTTSAudio, parseSpeakerMetaLines, extractListeningScriptBody } from './aiService';
+import { normalizeListeningRealismSettings } from './listeningRealism';
 
 const LISTENING_VOICES = {
     examiner_female: 'EXAVITQu4vr4xnSDxMaL',
@@ -14,6 +15,21 @@ const LISTENING_VOICES = {
     passage_male_primary: 'TxGEqnHWrfWFTfGW9XjX',
     passage_male_secondary: 'VR6AewLTigWG4xSOukaG',
 };
+
+const VOICE_STYLE_PRESETS = {
+    warm_bright: { stability: 0.42, similarity_boost: 0.78, style: 0.58, use_speaker_boost: true },
+    calm_clear: { stability: 0.58, similarity_boost: 0.76, style: 0.35, use_speaker_boost: true },
+    helpful_confident: { stability: 0.48, similarity_boost: 0.8, style: 0.5, use_speaker_boost: true },
+    energetic_friendly: { stability: 0.38, similarity_boost: 0.81, style: 0.64, use_speaker_boost: true },
+    serious_focused: { stability: 0.63, similarity_boost: 0.74, style: 0.28, use_speaker_boost: true },
+    thoughtful_measured: { stability: 0.61, similarity_boost: 0.77, style: 0.26, use_speaker_boost: true },
+    default: { stability: 0.52, similarity_boost: 0.78, style: 0.4, use_speaker_boost: true },
+};
+
+function getVoiceMetadataMap(scriptText = '') {
+    const metadata = parseSpeakerMetaLines(scriptText);
+    return new Map(metadata.map(item => [item.label, item]));
+}
 
 function isExaminerLikeSpeaker(label = '') {
     const normalized = label.toLowerCase();
@@ -31,13 +47,22 @@ function inferGenderFromLabel(label = '') {
     return 'unknown';
 }
 
+function inferLifeStageBucket(age = '') {
+    const normalized = String(age || '').toLowerCase();
+    if (normalized.includes('teen') || normalized.includes('young')) return 'young';
+    if (normalized.includes('student')) return 'young';
+    if (normalized.includes('senior') || normalized.includes('older') || normalized.includes('retired')) return 'senior';
+    return 'adult';
+}
+
 export function parseListeningScript(scriptText = '') {
-    const lines = scriptText
+    const lines = extractListeningScriptBody(scriptText)
         .split('\n')
         .map(line => line.trim())
         .filter(Boolean);
     const segments = [];
     let current = null;
+    const metadataMap = getVoiceMetadataMap(scriptText);
 
     for (const line of lines) {
         const match = line.match(/^([^:]+):\s*(.+)$/);
@@ -49,10 +74,17 @@ export function parseListeningScript(scriptText = '') {
                 });
             }
             const speakerLabel = match[1].trim();
+            const persona = metadataMap.get(speakerLabel) || {};
             current = {
                 speakerLabel,
                 speakerName: speakerLabel.replace(/\s*\((female|male)\)\s*/i, '').trim(),
-                gender: inferGenderFromLabel(speakerLabel),
+                gender: persona.gender || inferGenderFromLabel(speakerLabel),
+                age: persona.age || 'adult',
+                role: persona.role || 'speaker',
+                accent: persona.accent || 'neutral_international',
+                energy: persona.energy || 'calm_clear',
+                emotion: persona.emotion || 'default',
+                pace: persona.pace || 'steady_clear',
                 text: match[2].trim(),
             };
         } else if (current) {
@@ -62,6 +94,12 @@ export function parseListeningScript(scriptText = '') {
                 speakerLabel: 'NARRATOR',
                 speakerName: 'NARRATOR',
                 gender: 'unknown',
+                age: 'adult',
+                role: 'speaker',
+                accent: 'neutral_international',
+                energy: 'calm_clear',
+                emotion: 'default',
+                pace: 'steady_clear',
                 text: line,
             };
         }
@@ -77,82 +115,86 @@ export function parseListeningScript(scriptText = '') {
     return segments.filter(segment => segment.text);
 }
 
-export function assignVoicesToSegments(scriptText = '') {
+export function buildSpokenAudioText(scriptText = '') {
+    const segments = parseListeningScript(scriptText);
+    if (segments.length > 0) {
+        return segments.map(segment => segment.text).join(' ').trim();
+    }
+
+    return extractListeningScriptBody(scriptText)
+        .split('\n')
+        .map(line => line.replace(/^[^:]{2,80}:\s*/, '').trim())
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+}
+
+function getVoiceIdForPersona(segment, index) {
+    const persona = segment || {};
+    const role = String(persona.role || '').toLowerCase();
+    const gender = String(persona.gender || 'unknown').toLowerCase();
+    const ageBucket = inferLifeStageBucket(persona.age);
+
+    if (isExaminerLikeSpeaker(persona.speakerLabel || persona.label || '') || role.includes('examiner') || role.includes('lecturer') || role.includes('narrator') || role.includes('officer')) {
+        return gender === 'male'
+            ? LISTENING_VOICES.examiner_male
+            : LISTENING_VOICES.examiner_female;
+    }
+
+    if (gender === 'female') {
+        if (ageBucket === 'young') return LISTENING_VOICES.passage_female_secondary;
+        return index % 2 === 0 ? LISTENING_VOICES.passage_female_primary : LISTENING_VOICES.passage_female_secondary;
+    }
+
+    if (gender === 'male') {
+        if (ageBucket === 'young') return LISTENING_VOICES.passage_male_secondary;
+        return index % 2 === 0 ? LISTENING_VOICES.passage_male_primary : LISTENING_VOICES.passage_male_secondary;
+    }
+
+    return index % 2 === 0 ? LISTENING_VOICES.passage_female_primary : LISTENING_VOICES.passage_male_primary;
+}
+
+function getVoiceSettingsForPersona(segment, realismSettings) {
+    const persona = segment || {};
+    const normalizedSettings = normalizeListeningRealismSettings(realismSettings);
+    const emotionKey = String(persona.emotion || '').toLowerCase();
+    const energyKey = String(persona.energy || '').toLowerCase();
+    const voiceStyle = VOICE_STYLE_PRESETS[emotionKey] || VOICE_STYLE_PRESETS[energyKey] || VOICE_STYLE_PRESETS.default;
+    let styleBoost = 0;
+    if (normalizedSettings.emotionalExpressiveness === 'medium') styleBoost = 0.08;
+    if (normalizedSettings.emotionalExpressiveness === 'high') styleBoost = 0.16;
+    let stabilityOffset = 0;
+    if (normalizedSettings.realismMode === 'immersive') stabilityOffset = -0.03;
+    if (normalizedSettings.realismMode === 'cinematic') stabilityOffset = -0.06;
+    return {
+        stability: Math.max(0.25, Math.min(0.8, voiceStyle.stability + stabilityOffset)),
+        similarity_boost: voiceStyle.similarity_boost,
+        style: Math.max(0, Math.min(1, (voiceStyle.style || 0) + styleBoost)),
+        use_speaker_boost: voiceStyle.use_speaker_boost,
+    };
+}
+
+export function assignVoicesToSegments(scriptText = '', realismSettings = {}) {
     const segments = parseListeningScript(scriptText);
     const speakerVoiceMap = new Map();
-    let femaleCount = 0;
-    let maleCount = 0;
 
-    return segments.map(segment => {
+    return segments.map((segment, index) => {
         const key = segment.speakerLabel;
         if (!speakerVoiceMap.has(key)) {
-            let voiceId = LISTENING_VOICES.passage_male_primary;
-            if (isExaminerLikeSpeaker(segment.speakerLabel)) {
-                voiceId = segment.gender === 'male'
-                    ? LISTENING_VOICES.examiner_male
-                    : LISTENING_VOICES.examiner_female;
-            } else if (segment.gender === 'female') {
-                voiceId = femaleCount === 0
-                    ? LISTENING_VOICES.passage_female_primary
-                    : LISTENING_VOICES.passage_female_secondary;
-                femaleCount += 1;
-            } else if (segment.gender === 'male') {
-                voiceId = maleCount === 0
-                    ? LISTENING_VOICES.passage_male_primary
-                    : LISTENING_VOICES.passage_male_secondary;
-                maleCount += 1;
-            } else {
-                voiceId = speakerVoiceMap.size % 2 === 0
-                    ? LISTENING_VOICES.passage_female_primary
-                    : LISTENING_VOICES.passage_male_primary;
-            }
-            speakerVoiceMap.set(key, voiceId);
+            speakerVoiceMap.set(key, {
+                voiceId: getVoiceIdForPersona(segment, index),
+                voiceSettings: getVoiceSettingsForPersona(segment, realismSettings),
+            });
         }
 
+        const assigned = speakerVoiceMap.get(key);
         return {
             ...segment,
-            voiceId: speakerVoiceMap.get(key),
+            voiceId: assigned.voiceId,
+            voiceSettings: assigned.voiceSettings,
         };
     });
 }
-
-// ========================================
-// Audio Hash Generation
-// ========================================
-
-async function generateAudioHash(scriptText, voiceId, speed, settings = {}) {
-    const input = `${scriptText}|${voiceId}|${speed}|${JSON.stringify(settings)}`;
-
-    // Try Web Crypto API first (only available in secure contexts / HTTPS)
-    if (typeof crypto !== 'undefined' && crypto.subtle) {
-        try {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(input);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        } catch (error) {
-            console.warn('crypto.subtle.digest failed, using fallback hash:', error);
-        }
-    }
-
-    // Simple fallback hash for non-secure contexts (HTTP)
-    let h1 = 0xdeadbeef;
-    let h2 = 0x41c6ce57;
-    for (let i = 0; i < input.length; i++) {
-        const ch = input.charCodeAt(i);
-        h1 = Math.imul(h1 ^ ch, 2654435761);
-        h2 = Math.imul(h2 ^ ch, 1597334677);
-    }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    const hash = (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
-    return hash;
-}
-
-// ========================================
-// Get or Create Audio (Hash-based Caching)
-// ========================================
 
 /**
  * Check if audio already exists for this exact script+voice+speed combination.
@@ -167,12 +209,16 @@ export async function getOrCreateAudio({
     settings = {},
     organizationId = null,
 }) {
-    const assignedSegments = assignVoicesToSegments(scriptText);
+    const normalizedSettings = normalizeListeningRealismSettings(settings);
+    const cleanScriptText = extractListeningScriptBody(scriptText);
+    const spokenAudioText = buildSpokenAudioText(scriptText);
+    const assignedSegments = assignVoicesToSegments(scriptText, normalizedSettings);
     const uniqueSpeakers = new Set(assignedSegments.map(segment => segment.speakerLabel)).size;
     const primaryVoiceId = assignedSegments[0]?.voiceId || voiceId;
+    const primaryVoiceSettings = assignedSegments[0]?.voiceSettings || getVoiceSettingsForPersona({}, normalizedSettings);
 
     if (assignedSegments.length > 1 && uniqueSpeakers > 1) {
-        const estimatedDuration = Math.round((scriptText.split(/\s+/).length / 150) * 60 / speed);
+        const estimatedDuration = Math.round((cleanScriptText.split(/\s+/).length / 150) * 60 / speed);
         return {
             audioUrl: null,
             duration: estimatedDuration,
@@ -183,7 +229,7 @@ export async function getOrCreateAudio({
     }
 
     // Step 1: Generate deterministic hash
-    const audioHash = await generateAudioHash(scriptText, primaryVoiceId, speed, settings);
+    const audioHash = await generateAudioHash(spokenAudioText, primaryVoiceId, speed, { ...normalizedSettings, ...primaryVoiceSettings });
 
     // Step 2: Check if audio already exists in Supabase Storage
     const { data: existing } = await supabase
@@ -233,13 +279,13 @@ export async function getOrCreateAudio({
     // Step 3: Generate new audio via ElevenLabs (with browser TTS fallback)
     try {
         console.log('[AudioEngine] Generating new audio via ElevenLabs...');
-        const audioBlob = await generateTTSAudio(scriptText, primaryVoiceId, speed);
+        const audioBlob = await generateTTSAudio(spokenAudioText, primaryVoiceId, speed, primaryVoiceSettings);
 
         // If browser TTS fallback was used, return special marker
         if (audioBlob === '__browser_tts__') {
             return {
                 audioUrl: null,
-                duration: Math.round((scriptText.split(/\s+/).length / 150) * 60 / speed),
+                duration: Math.round((spokenAudioText.split(/\s+/).length / 150) * 60 / speed),
                 wasReused: false,
                 useBrowserTTS: true,
             };
@@ -252,7 +298,7 @@ export async function getOrCreateAudio({
 
         // Step 4: Upload to Supabase Storage in background (for caching)
         const fileName = `listening/${audioHash}.mp3`;
-        const wordCount = scriptText.split(/\s+/).length;
+        const wordCount = spokenAudioText.split(/\s+/).length;
         const estimatedDuration = Math.round((wordCount / 150) * 60 / speed);
 
         // Fire-and-forget: upload & cache metadata in background
@@ -278,7 +324,7 @@ export async function getOrCreateAudio({
                         audio_url: fileName, // Store file path; signed URL generated on retrieval
                         voice_id: primaryVoiceId,
                         speed,
-                        settings,
+                        settings: { ...normalizedSettings, ...primaryVoiceSettings },
                         audio_hash: audioHash,
                         duration_seconds: estimatedDuration,
                         file_size_bytes: audioBlob.size,
@@ -292,7 +338,7 @@ export async function getOrCreateAudio({
             }
 
             // Log TTS generation cost
-            const charCount = scriptText.length;
+            const charCount = spokenAudioText.length;
             const ttsCost = (charCount / 1000) * 0.30;
             try {
                 await supabase.from('ai_usage_log').insert({
@@ -318,7 +364,7 @@ export async function getOrCreateAudio({
         // Final fallback: use browser TTS
         return {
             audioUrl: null,
-            duration: Math.round((scriptText.split(/\s+/).length / 150) * 60 / speed),
+            duration: Math.round((spokenAudioText.split(/\s+/).length / 150) * 60 / speed),
             wasReused: false,
             useBrowserTTS: true,
         };

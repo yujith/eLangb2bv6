@@ -6,6 +6,7 @@
 import { supabase } from './supabase';
 import * as ai from './aiService';
 import { enforceRateLimit } from './rateLimiter';
+import { normalizeListeningRealismSettings, getListeningRealismProfileKey } from './listeningRealism';
 
 // ========================================
 // Content Hash Generation
@@ -211,9 +212,12 @@ export async function getOrCreateListeningContent({
     difficulty = 'band_6_7',
     section = 1,
     ieltsType = 'academic',
+    realismSettings = {},
     organizationId = null,
     studentId = null,
 }) {
+    const normalizedRealismSettings = normalizeListeningRealismSettings(realismSettings);
+    const realismProfileKey = getListeningRealismProfileKey(normalizedRealismSettings);
     // Search for existing listening content matching section and ielts_type
     const { data: existing } = await supabase
         .from('global_content_items')
@@ -224,6 +228,7 @@ export async function getOrCreateListeningContent({
         .eq('difficulty', difficulty)
         .in('ielts_type', [ieltsType, 'both'])
         .contains('topic_tags', [`section_${section}`])
+        .contains('question_types', [`realism_${realismProfileKey}`])
         .limit(5);
 
     if (existing && existing.length > 0) {
@@ -241,13 +246,14 @@ export async function getOrCreateListeningContent({
 
     // Generate new
     if (organizationId && studentId) await enforceRateLimit(studentId, organizationId);
-    const { script, tokensUsed: scriptTokens } = await ai.generateListeningScript(
+    const { script, scriptBody, speakerMetadata, realismProfileKey: generatedProfileKey, tokensUsed: scriptTokens } = await ai.generateListeningScript(
         topic || 'daily life',
         difficulty,
-        section
+        section,
+        normalizedRealismSettings
     );
 
-    const { questions, tokensUsed: questionTokens } = await ai.generateListeningQuestions(script, 10);
+    const { questions, tokensUsed: questionTokens } = await ai.generateListeningQuestions(scriptBody, 10);
     const contentHash = await generateContentHash(script);
 
     const { data: newContent } = await supabase
@@ -260,7 +266,7 @@ export async function getOrCreateListeningContent({
             title: `Listening Section ${section} - ${topic || 'General'}`,
             body: script,
             topic_tags: [topic ? topic.toLowerCase() : 'general', `section_${section}`],
-            question_types: ['fill_blank', 'mcq', 'matching'],
+            question_types: ['fill_blank', 'mcq', 'matching', `realism_${generatedProfileKey}`],
             created_by: 'ai',
             status: 'active',
             usage_count: 1,
@@ -287,6 +293,8 @@ export async function getOrCreateListeningContent({
         contentItem: newContent || { body: script },
         questionSet: { questions },
         audio: null, // Audio generated separately via audioEngine
+        speakerMetadata,
+        realismProfileKey,
         wasReused: false,
     };
 }

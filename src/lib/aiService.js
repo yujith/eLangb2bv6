@@ -3,6 +3,8 @@
  * Uses OpenAI for text generation and ElevenLabs for TTS.
  */
 
+import { normalizeListeningRealismSettings, getListeningRealismProfileKey } from './listeningRealism';
+
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
 
@@ -161,47 +163,191 @@ Return ONLY valid JSON in this exact format:
 // Listening Content Generation
 // ========================================
 
-export async function generateListeningScript(topic, difficulty, section = 1) {
-    const sectionDescriptions = {
-        1: 'A conversation between two people in an everyday social context (e.g., booking a hotel, asking for directions)',
-        2: 'A monologue in an everyday social context (e.g., a speech about local facilities, a tour guide)',
-        3: 'A conversation between up to four people in an educational/training context (e.g., university tutorial)',
-        4: 'A monologue on an academic subject (e.g., a university lecture)',
+export function extractListeningScriptBody(script = '') {
+    return String(script || '')
+        .split('\n')
+        .filter(line => !line.trim().startsWith('@'))
+        .join('\n')
+        .trim();
+}
+
+export function parseSpeakerMetaLines(script = '') {
+    return String(script || '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.startsWith('@VOICECAST '))
+        .map(line => {
+            const raw = line.replace('@VOICECAST ', '').trim();
+            const parts = raw.split('|').map(part => part.trim());
+            const meta = {};
+            parts.forEach(part => {
+                const [key, ...rest] = part.split('=');
+                if (!key || rest.length === 0) return;
+                meta[key.trim()] = rest.join('=').trim();
+            });
+            return meta;
+        })
+        .filter(meta => meta.label);
+}
+
+function validateListeningScript(script, section = 1) {
+    const errors = [];
+    const meta = parseSpeakerMetaLines(script);
+    const body = extractListeningScriptBody(script);
+    const lines = body.split('\n').map(line => line.trim()).filter(Boolean);
+    const speakerTurns = lines.filter(line => /^[^:]{2,80}:\s+.+$/.test(line));
+    const uniqueSpeakers = new Set(speakerTurns.map(line => line.split(':')[0].trim()));
+    const hasDisallowedStageDirections = /\[[^\]]+\]|\([^\)]*(laughs|pause|music|sighs|background|inaudible)[^\)]*\)/i.test(body);
+    const hasMarkdown = /[*#`_]/.test(body);
+    const wordCount = body.split(/\s+/).filter(Boolean).length;
+    const hasTestableDetails = /\b\d{1,2}(:\d{2})?\b|\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)\b|\b(?:Street|Road|Avenue|Building|Room|Hall|Centre|Center|Library|Campus)\b/i.test(body);
+
+    if (meta.length === 0) errors.push('Missing @VOICECAST metadata lines.');
+    if (speakerTurns.length < 6) errors.push('Not enough labelled spoken turns for natural audio pacing.');
+    if (hasDisallowedStageDirections) errors.push('Contains stage directions or performance annotations.');
+    if (hasMarkdown) errors.push('Contains markdown-style symbols not suitable for TTS.');
+    if (wordCount < 260 || wordCount > 560) errors.push('Word count outside listening target range.');
+    if (!hasTestableDetails) errors.push('Missing enough testable factual details.');
+
+    if (section === 1 && uniqueSpeakers.size !== 2) errors.push('Section 1 must have exactly 2 primary speakers.');
+    if (section === 2 && uniqueSpeakers.size !== 1) errors.push('Section 2 must have exactly 1 primary speaker.');
+    if (section === 3 && (uniqueSpeakers.size < 2 || uniqueSpeakers.size > 4)) errors.push('Section 3 must have between 2 and 4 primary speakers.');
+    if (section === 4 && uniqueSpeakers.size !== 1) errors.push('Section 4 must have exactly 1 primary speaker.');
+
+    meta.forEach(persona => {
+        if (!persona.gender) errors.push(`Missing gender metadata for ${persona.label}.`);
+        if (!persona.age) errors.push(`Missing age metadata for ${persona.label}.`);
+        if (!persona.role) errors.push(`Missing role metadata for ${persona.label}.`);
+        if (!persona.energy) errors.push(`Missing energy metadata for ${persona.label}.`);
+        if (!persona.emotion) errors.push(`Missing emotion metadata for ${persona.label}.`);
+    });
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        speakerCount: uniqueSpeakers.size,
+        wordCount,
+        metadata: meta,
+        body,
     };
+}
+
+function buildListeningScriptPrompt({ topic, difficulty, section, settings }) {
+    const sectionDescriptions = {
+        1: 'A conversation between two people in an everyday social context such as booking, enquiries, services, transport, or accommodation.',
+        2: 'A single-speaker social-context monologue such as a tour guide, information session, facility introduction, or public announcement.',
+        3: 'A conversation between up to four people in an education or training context such as a tutorial, project meeting, or seminar discussion.',
+        4: 'A single-speaker academic monologue such as a lecture, seminar presentation, or research overview.',
+    };
+
+    const difficultyDescriptions = {
+        band_4_5: 'clear vocabulary, lighter information density, simple but still authentic spoken grammar',
+        band_6_7: 'moderately challenging detail density, natural reformulation, and realistic distractors',
+        band_8_9: 'dense detail, subtle reformulation, layered paraphrase, and highly authentic spoken complexity',
+    };
+
+    return `Generate an IELTS Listening Section ${section} script about "${topic}".
+
+Section type: ${sectionDescriptions[section]}
+Difficulty: ${difficultyDescriptions[difficulty] || difficultyDescriptions.band_6_7}
+Realism mode: ${settings.realismMode}
+Preferred accent profile: ${settings.accentProfile}
+Age realism: ${settings.ageRealism}
+Emotional expressiveness: ${settings.emotionalExpressiveness}
+Voice variety: ${settings.voiceVariety}
+Duration target: 3-5 minutes when spoken
+
+You must make the audio feel real-to-life and highly castable for voice synthesis.
+
+First output metadata lines for every speaker using this exact format:
+@VOICECAST label=EMMA | gender=female | age=young_adult | role=student_services_officer | accent=british_leaning | energy=warm_bright | emotion=helpful_confident | pace=steady_clear
+
+Then output the script with labelled turns only, for example:
+EMMA: Good morning, how can I help you?
+LIAM: Hi, I'm calling about...
+
+Rules:
+- Return plain text only
+- No markdown, no bullet points, no hashes, no asterisks, no JSON
+- No stage directions, no sound effects, no bracketed performance notes
+- Every spoken line must start with a speaker label followed by a colon
+- Speaker labels in dialogue must match the @VOICECAST labels exactly
+- Create believable speaker identity, age, relationship, motivation, and context
+- Make speech natural for TTS: clean punctuation, short-to-medium turns, no broken fragments, no unnatural filler spam
+- Keep content IELTS-appropriate and exam-authentic, not theatrical
+- Include concrete testable details such as names, times, prices, room numbers, dates, or locations
+- Ensure personas match context realistically, for example younger student voices for students, older voices for retired or senior roles
+- Keep total spoken content between 300 and 500 words
+- Section 1 must use exactly 2 speakers
+- Section 2 must use exactly 1 speaker
+- Section 3 must use between 2 and 4 speakers
+- Section 4 must use exactly 1 speaker
+
+Return ONLY the metadata lines followed by the script.`;
+}
+
+async function repairListeningScript(script, section, topic, difficulty, settings, validationErrors) {
+    const { content } = await callOpenAI([
+        {
+            role: 'system',
+            content: 'You repair IELTS listening scripts for high-quality TTS performance. Return plain text only.'
+        },
+        {
+            role: 'user',
+            content: `Repair this IELTS listening script so it fully satisfies the format and realism requirements.
+
+Topic: ${topic}
+Difficulty: ${difficulty}
+Section: ${section}
+Realism profile key: ${getListeningRealismProfileKey(settings)}
+Validation issues:
+${validationErrors.map(error => `- ${error}`).join('\n')}
+
+SCRIPT TO REPAIR:
+${script}
+
+You must preserve the overall scenario where possible, but fix formatting, metadata completeness, realism, pacing, and TTS suitability.
+Return only the repaired metadata lines and script.`
+        }
+    ], { maxTokens: 2200, temperature: 0.5 });
+
+    return content.trim();
+}
+
+export async function generateListeningScript(topic, difficulty, section = 1, realismSettings = {}) {
+    const normalizedSettings = normalizeListeningRealismSettings(realismSettings);
 
     const { content, tokensUsed } = await callOpenAI([
         {
             role: 'system',
-            content: 'You are an expert IELTS examiner creating listening test scripts. Write natural-sounding dialogue and monologue scripts that are suitable for realistic voice performance.'
+            content: 'You are an expert IELTS examiner creating listening test scripts. Write natural-sounding dialogue and monologue scripts that are suitable for realistic voice performance and robust TTS rendering.'
         },
         {
             role: 'user',
-            content: `Generate an IELTS Listening Section ${section} script about "${topic}".
-
-Section type: ${sectionDescriptions[section]}
-Difficulty: ${difficulty}
-Duration target: 3-5 minutes when spoken
-
-Requirements:
-- Natural conversational tone
-- Include speaker labels on every spoken turn
-- For dialogue sections, use realistic named speakers and include gender in the label, for example:
-  EMMA (female): ...
-  DANIEL (male): ...
-- For monologues, use a single descriptive label such as:
-  NARRATOR (female): ...
-  LECTURER (male): ...
-- Include key information that can be tested (names, numbers, dates, places)
-- 300-500 words
-- Keep each spoken turn reasonably short so it can be voiced naturally
-- Do not include stage directions or explanations
-- Do not use generic labels like SPEAKER A unless absolutely necessary
-
-Return ONLY the script text.`
+            content: buildListeningScriptPrompt({ topic, difficulty, section, settings: normalizedSettings })
         }
-    ]);
+    ], { maxTokens: 2200, temperature: 0.8 });
 
-    return { script: content.trim(), tokensUsed };
+    let script = content.trim();
+    let validation = validateListeningScript(script, section);
+
+    if (!validation.isValid) {
+        script = await repairListeningScript(script, section, topic, difficulty, normalizedSettings, validation.errors);
+        validation = validateListeningScript(script, section);
+    }
+
+    if (!validation.isValid) {
+        throw new Error(`Listening script validation failed: ${validation.errors.join(' ')}`);
+    }
+
+    return {
+        script,
+        scriptBody: validation.body,
+        speakerMetadata: validation.metadata,
+        validation,
+        realismProfileKey: getListeningRealismProfileKey(normalizedSettings),
+        tokensUsed,
+    };
 }
 
 export async function generateListeningQuestions(script, count = 10) {
@@ -575,13 +721,18 @@ export async function generateCueCard() {
     return generateCueCardForTopic(randomTopic);
 }
 
-export async function generateTTSAudio(text, voiceId = 'pNInz6obpgDQGcFmaJgB', speed = 1.0) {
+export async function generateTTSAudio(text, voiceId = 'pNInz6obpgDQGcFmaJgB', speed = 1.0, voiceSettings = {}) {
     if (!ELEVENLABS_API_KEY) {
         console.warn('No ElevenLabs API key configured, using browser TTS fallback');
         return generateBrowserTTSAudio(text, speed);
     }
 
     try {
+        const normalizedVoiceSettings = {
+            stability: 0.5,
+            similarity_boost: 0.75,
+            ...voiceSettings,
+        };
         console.log('[TTS] Calling ElevenLabs API, voice:', voiceId, 'text length:', text.length);
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
             method: 'POST',
@@ -592,10 +743,7 @@ export async function generateTTSAudio(text, voiceId = 'pNInz6obpgDQGcFmaJgB', s
             body: JSON.stringify({
                 text: text.substring(0, 5000), // ElevenLabs has text length limits
                 model_id: 'eleven_multilingual_v2',
-                voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.75,
-                },
+                voice_settings: normalizedVoiceSettings,
             }),
         });
 

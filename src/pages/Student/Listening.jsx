@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getOrCreateListeningContent } from '../../lib/contentEngine';
-import { getOrCreateAudio } from '../../lib/audioEngine';
-import { generateTTSAudio } from '../../lib/aiService';
+import { getOrCreateAudio, buildSpokenAudioText } from '../../lib/audioEngine';
+import { generateTTSAudio, extractListeningScriptBody } from '../../lib/aiService';
 import { supabase } from '../../lib/supabase';
 import {
     Headphones, Clock, Play, Pause, RotateCcw,
@@ -141,17 +141,19 @@ export default function ListeningModule() {
 
         try {
             const topicPool = config.ieltsType === 'academic' ? TOPICS_ACADEMIC : TOPICS_GENERAL;
+            const realismSettings = organization?.listening_realism_settings || undefined;
             const result = await getOrCreateListeningContent({
                 topic: config.topic || topicPool[Math.floor(Math.random() * topicPool.length)],
                 difficulty: config.difficulty,
                 section: config.section,
                 ieltsType: config.ieltsType,
+                realismSettings,
                 organizationId: organization?.id,
                 studentId: profile?.id,
             });
 
             setContent(result.contentItem);
-            setScript(result.contentItem?.body || '');
+            setScript(extractListeningScriptBody(result.contentItem?.body || ''));
 
             const qs = normalizeListeningQuestions(result.questionSet?.questions || []);
             setQuestions(qs);
@@ -163,6 +165,7 @@ export default function ListeningModule() {
                     const audioResult = await getOrCreateAudio({
                         scriptText: result.contentItem.body,
                         contentItemId: result.contentItem.id,
+                        settings: realismSettings,
                         organizationId: organization?.id,
                     });
                     if (audioResult.useBrowserTTS) {
@@ -171,7 +174,7 @@ export default function ListeningModule() {
                     } else if (audioResult.useSegmentedAudio && audioResult.audioSegments?.length) {
                         const generatedSegments = [];
                         for (const segment of audioResult.audioSegments) {
-                            const segmentBlob = await generateTTSAudio(segment.text, segment.voiceId);
+                            const segmentBlob = await generateTTSAudio(segment.text, segment.voiceId, 1.0, segment.voiceSettings);
                             if (segmentBlob === '__browser_tts__') {
                                 setUseBrowserTTS(true);
                                 setAudioUrl(null);
@@ -230,13 +233,14 @@ export default function ListeningModule() {
     };
 
     const playBrowserTTS = () => {
-        if (!script || playsUsed >= MAX_PLAYS) return;
-        console.log('[BrowserTTS] Playing, script length:', script.length, 'voices loaded:', voicesLoadedRef.current);
+        const spokenScript = buildSpokenAudioText(content?.body || script);
+        if (!spokenScript || playsUsed >= MAX_PLAYS) return;
+        console.log('[BrowserTTS] Playing, script length:', spokenScript.length, 'voices loaded:', voicesLoadedRef.current);
         window.speechSynthesis.cancel();
 
         // Chrome has a bug where speechSynthesis stops after ~15 seconds.
         // Workaround: break text into sentence chunks and queue them.
-        const sentences = script.match(/[^.!?]+[.!?]+/g) || [script];
+        const sentences = spokenScript.match(/[^.!?]+[.!?]+/g) || [spokenScript];
         const chunks = [];
         let current = '';
         for (const s of sentences) {
@@ -254,7 +258,7 @@ export default function ListeningModule() {
             || voices.find(v => v.lang.startsWith('en-'));
         console.log('[BrowserTTS] Using voice:', englishVoice?.name || 'default', 'chunks:', chunks.length);
 
-        const estimatedDuration = Math.max((script.split(/\s+/).length / 150) * 60, 30);
+        const estimatedDuration = Math.max((spokenScript.split(/\s+/).length / 150) * 60, 30);
         startBrowserTTSProgress(estimatedDuration);
 
         chunks.forEach((chunk, i) => {

@@ -6,10 +6,13 @@
  * For MVP, we use a direct client-side WebSocket connection.
  */
 
-import { generateExaminerInstructions } from './speakingInstructions';
+import { createSpeakingSessionPlan } from './speakingInstructions';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const REALTIME_MODEL = import.meta.env.VITE_OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17';
+const DEFAULT_RESPONSE_SETTINGS = {
+    modalities: ['text', 'audio'],
+};
 
 /**
  * @typedef {Object} RealtimeSession
@@ -58,11 +61,82 @@ export function createRealtimeSession(callbacks = {}) {
     let gainNode = null;
     let nextPlayTime = 0;
     let sessionConfig = callbacks.sessionConfig || null;
+    let pendingStage = null;
+    let pendingMicReleaseTimer = null;
+
+    const getTiming = (key, fallback) => {
+        const value = sessionConfig?.timing?.[key];
+        return typeof value === 'number' ? value : fallback;
+    };
+
+    const getStagePrompt = (key, fallback = '') => sessionConfig?.stagePrompts?.[key] || fallback;
+
+    const clearPendingMicRelease = () => {
+        if (pendingMicReleaseTimer) {
+            clearTimeout(pendingMicReleaseTimer);
+            pendingMicReleaseTimer = null;
+        }
+    };
+
+    const queueMicRelease = () => {
+        clearPendingMicRelease();
+        pendingMicReleaseTimer = setTimeout(() => {
+            if (!isAgentSpeaking && currentPart !== 'part2_prep' && currentPart !== 'finished') {
+                isMuted = false;
+            }
+            pendingMicReleaseTimer = null;
+        }, getTiming('agentMicReleaseDelayMs', 350));
+    };
+
+    const sendResponseInstructions = (instructions) => {
+        if (!instructions || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+        ws.send(JSON.stringify({
+            type: 'response.create',
+            response: {
+                ...DEFAULT_RESPONSE_SETTINGS,
+                instructions,
+            },
+        }));
+    };
+
+    const emitStageChange = (nextStage) => {
+        currentPart = nextStage;
+        callbacks.onStageChange?.(nextStage);
+    };
+
+    const buildPart2CueCardInstructions = () => `Now transition to Part 2. Read the following cue card aloud EXACTLY as written, line by line. Do not summarize, rephrase, simplify, or replace any bullet point. Read the title and every line under "You should say:" exactly.
+
+CUE CARD START
+${sessionConfig?.cueCardText}
+CUE CARD END
+
+After reading the full cue card exactly, say exactly: "${getStagePrompt('part2PrepIntroLine', 'You have one minute to prepare. You can make notes if you wish.')}" After you finish presenting the cue card and that preparation instruction, DO NOT speak again until told to. The system will handle the preparation timer.`;
+
+    const buildStageInstructions = (toPart) => {
+        switch (toPart) {
+            case 'part1':
+                return `Begin the IELTS Speaking test. Introduce yourself as Sarah. Start with this exact line: "${getStagePrompt('part1StartLine1', 'Good morning. My name is Sarah. Can you tell me your full name, please?')}" Then say exactly: "${getStagePrompt('part1StartLine2', 'Can I see your identification, please? Thank you.')}" Continue Part 1 by asking only ONE clear question at a time.`;
+            case 'part2_prep':
+                return buildPart2CueCardInstructions();
+            case 'part2':
+                return `The preparation time is now over. Say exactly: "${getStagePrompt('part2StartLine', 'All right, please begin speaking.')}" Then remain silent while the candidate answers. Let the candidate keep speaking naturally. If they appear completely finished before time expires, you may use exactly one gentle prompt: "${getStagePrompt('part2PromptLine', 'Is there anything else you would like to add?')}" Do NOT move to Part 3 or ask follow-up questions yet.`;
+            case 'part2_followup':
+                return `The long turn is now complete. First say exactly: "${getStagePrompt('part2FollowupIntroLine', 'Thank you.')}" Then ask only ONE brief follow-up question at a time related to the Part 2 topic. After each question, wait patiently for a full answer. Allow substantial thinking time before speaking again. Ask no more than two brief follow-up questions total. When the follow-up questions are complete, end by saying exactly: "${getStagePrompt('part3TransitionLine', "We'll now move on to Part 3.")}"`;
+            case 'part3':
+                return `You are now in Part 3. Ask one abstract discussion question at a time linked to these themes: "${sessionConfig?.part3Themes?.[0]}" and "${sessionConfig?.part3Themes?.[1]}". Wait patiently for each full answer before asking the next question. Do not rush short silences.`;
+            case 'finished':
+                return `End the speaking test now. Say exactly: "${getStagePrompt('finishedLine', 'Thank you. That is the end of the speaking test.')}"`;
+            default:
+                return '';
+        }
+    };
 
     const ensurePlaybackCtx = () => {
         if (!playbackCtx || playbackCtx.state === 'closed') {
             playbackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
             gainNode = playbackCtx.createGain();
+
             gainNode.gain.value = 1.0;
             gainNode.connect(playbackCtx.destination);
             nextPlayTime = 0;
@@ -117,7 +191,7 @@ export function createRealtimeSession(callbacks = {}) {
             );
 
             // Generate fresh randomized instructions for this session
-            sessionConfig = sessionConfig || generateExaminerInstructions();
+            sessionConfig = sessionConfig || createSpeakingSessionPlan();
             const sessionInstructions = sessionConfig.instructions;
             console.log('[Realtime] Session topics:', {
                 part1: sessionConfig.part1Topics,
@@ -143,19 +217,13 @@ export function createRealtimeSession(callbacks = {}) {
                             type: 'server_vad',
                             threshold: 0.6,
                             prefix_padding_ms: 300,
-                            silence_duration_ms: 4860,
+                            silence_duration_ms: getTiming('realtimeVadSilenceMs', 5200),
                         },
                     },
                 }));
 
                 // Start the conversation - examiner begins
-                ws.send(JSON.stringify({
-                    type: 'response.create',
-                    response: {
-                        modalities: ['text', 'audio'],
-                        instructions: 'Begin the IELTS Speaking test. Start with Part 1: introduce yourself as examiner Sarah and ask the candidate their name. Ask ONE question at a time and wait for the candidate to respond before asking the next question.',
-                    },
-                }));
+                sendResponseInstructions(buildStageInstructions('part1'));
 
                 // Safety timeout to end session after max duration
                 sessionTimerHandle = setTimeout(() => {
@@ -163,7 +231,7 @@ export function createRealtimeSession(callbacks = {}) {
                     endSession();
                 }, MAX_SESSION_DURATION_MS);
 
-                callbacks.onStageChange?.('part1');
+                emitStageChange('part1');
             };
 
             ws.onmessage = (event) => {
@@ -190,11 +258,11 @@ export function createRealtimeSession(callbacks = {}) {
             };
 
             // Start sending audio via AudioWorklet (or ScriptProcessor fallback)
-            await startAudioStreaming();
+            startAudioStreaming();
 
             // Add a small delay before allowing mic input so examiner intro plays first
             isMuted = true;
-            setTimeout(() => { isMuted = false; }, 1000);
+            setTimeout(() => { isMuted = false; }, getTiming('introMicMuteMs', 1500));
 
         } catch (err) {
             callbacks.onError?.(err);
@@ -302,6 +370,7 @@ export function createRealtimeSession(callbacks = {}) {
                 // Add a brief delay before unmuting mic to let echo dissipate
                 isAgentSpeaking = false;
                 callbacks.onAgentSpeaking?.(false);
+                queueMicRelease();
                 break;
 
             case 'response.audio_transcript.delta':
@@ -321,6 +390,10 @@ export function createRealtimeSession(callbacks = {}) {
 
                     // Detect stage transitions from examiner speech
                     detectStageTransition(msg.transcript);
+
+                    if (pendingStage === 'part2_prep') {
+                        pendingStage = null;
+                    }
                 }
                 break;
 
@@ -345,6 +418,7 @@ export function createRealtimeSession(callbacks = {}) {
                         .map(o => o.content?.map(c => c.transcript || c.text || '').join('') || '')
                         .join('');
                     if (lastText.toLowerCase().includes('end of the speaking test')) {
+                        emitStageChange('finished');
                         setTimeout(() => {
                             endSession();
                         }, 2000);
@@ -423,27 +497,28 @@ export function createRealtimeSession(callbacks = {}) {
      */
     const detectStageTransition = (text) => {
         const lower = text.toLowerCase();
+
         if (currentPart === 'part1' && (lower.includes('move on to part 2') || lower.includes('move on to part two'))) {
-            currentPart = 'part2_prep';
-            // Mute mic immediately so the AI doesn't hear anything during prep
-            isMuted = true;
-            callbacks.onStageChange?.('part2_prep');
-        } else if (currentPart === 'part2_prep' && (lower.includes('please begin') || lower.includes('start speaking'))) {
-            // Ignore auto-detection during prep — the client-side timer handles the transition
-            // This prevents the AI from skipping prep time
+            advancePart('part2_prep');
             return;
-        } else if (currentPart === 'part2' && (lower.includes("we'll now move on to part 3") || lower.includes('we will now move on to part 3') || lower.includes('move on to part 3'))) {
-            // If AI tries to skip straight to Part 3 during Part 2, route through follow-up first
-            currentPart = 'part2_followup';
-            isMuted = false;
-            callbacks.onStageChange?.('part2_followup');
-        } else if (currentPart === 'part2_followup' && (lower.includes("we'll now move on to part 3") || lower.includes('we will now move on to part 3') || lower.includes('move on to part 3'))) {
-            currentPart = 'part3';
-            isMuted = false;
-            callbacks.onStageChange?.('part3');
-        } else if (currentPart === 'part3' && lower.includes('end of the speaking test')) {
-            currentPart = 'finished';
-            callbacks.onStageChange?.('finished');
+        }
+
+        if (currentPart === 'part2_prep' && (lower.includes('please begin') || lower.includes('start speaking'))) {
+            return;
+        }
+
+        if (currentPart === 'part2' && (lower.includes("we'll now move on to part 3") || lower.includes('we will now move on to part 3') || lower.includes('move on to part 3'))) {
+            advancePart('part2_followup');
+            return;
+        }
+
+        if (currentPart === 'part2_followup' && (lower.includes("we'll now move on to part 3") || lower.includes('we will now move on to part 3') || lower.includes('move on to part 3'))) {
+            advancePart('part3');
+            return;
+        }
+
+        if (currentPart === 'part3' && lower.includes('end of the speaking test')) {
+            emitStageChange('finished');
         }
     };
 
@@ -451,61 +526,37 @@ export function createRealtimeSession(callbacks = {}) {
      * Manually advance to next part (for fallback / user control).
      */
     const advancePart = (toPart) => {
-        currentPart = toPart;
-        callbacks.onStageChange?.(toPart);
+        if (!toPart || currentPart === toPart) {
+            return;
+        }
+
+        clearPendingMicRelease();
+        pendingStage = toPart;
+        emitStageChange(toPart);
 
         if (toPart === 'part2_prep') {
-            // MUTE mic during Part 2 prep so the AI doesn't hear anything and
-            // the student gets a genuine 60-second silent prep window.
             isMuted = true;
-
-            // Tell the model to present the cue card, then we handle the timer client-side.
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'response.create',
-                    response: {
-                        modalities: ['text', 'audio'],
-                        instructions: `Now transition to Part 2. Read the following cue card aloud EXACTLY as written, line by line. Do not summarize, rephrase, simplify, or replace any bullet point. Read the title and every line under "You should say:" exactly.
-
-CUE CARD START
-${sessionConfig?.cueCardText || 'Describe a memorable experience from your life.\n\nYou should say:\n• What the experience was\n• When it happened\n• Who was involved\n• And explain why it was memorable'}
-CUE CARD END
-
-After reading the full cue card exactly, tell the candidate they have one minute to prepare. After you finish presenting the cue card, DO NOT speak again until told to. The system will handle the preparation timer.`,
-                    },
-                }));
-            }
+            sendResponseInstructions(buildStageInstructions('part2_prep'));
             return;
         }
 
         if (toPart === 'part2') {
-            // Unmute mic — prep time is over, student should now speak
             isMuted = false;
         }
 
         if (toPart === 'part2_followup') {
-            // Unmute mic for follow-up Q&A
             isMuted = false;
         }
 
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            const instructions = {
-                part2: 'The preparation time is now over. Say exactly: "All right, please begin speaking." Then remain silent while the candidate answers. If they pause briefly, do not interrupt. Only use a short prompt such as "Is there anything else you would like to add?" if they appear fully finished. Do NOT move to Part 3 yet.',
-                part2_followup: 'Thank the candidate for their response. Ask only ONE brief follow-up question at a time related to the Part 2 topic. After each follow-up question, STOP and wait patiently for a full answer. Do not speak again after a short pause. Allow substantial thinking time before speaking again. Only after the first follow-up answer is complete may you ask a second brief follow-up question. When both follow-ups are complete, say "We\'ll now move on to Part 3."',
-                part3: 'Now move on to Part 3. Ask ONE abstract discussion question at a time related to the Part 2 topic, and wait patiently for the candidate to respond before asking the next question. Do not rush the candidate after short pauses.',
-                finished: 'End the speaking test. Thank the candidate and tell them the test is now complete.',
-            };
-
-            if (instructions[toPart]) {
-                ws.send(JSON.stringify({
-                    type: 'response.create',
-                    response: {
-                        modalities: ['text', 'audio'],
-                        instructions: instructions[toPart],
-                    },
-                }));
-            }
+        if (toPart === 'part3') {
+            isMuted = false;
         }
+
+        if (toPart === 'finished') {
+            isMuted = true;
+        }
+
+        sendResponseInstructions(buildStageInstructions(toPart));
     };
 
     /**
@@ -513,11 +564,19 @@ After reading the full cue card exactly, tell the candidate they have one minute
      */
     const cleanupAudio = () => {
         if (processorNode) {
-            try { processorNode.disconnect(); } catch (_) {}
+            try {
+                processorNode.disconnect();
+            } catch {
+                void 0;
+            }
             processorNode = null;
         }
         if (sourceNode) {
-            try { sourceNode.disconnect(); } catch (_) {}
+            try {
+                sourceNode.disconnect();
+            } catch {
+                void 0;
+            }
             sourceNode = null;
         }
         if (audioContext && audioContext.state !== 'closed') {
@@ -538,6 +597,7 @@ After reading the full cue card exactly, tell the candidate they have one minute
         isConnected = false;
         isAgentSpeaking = false;
         isMuted = true;
+        clearPendingMicRelease();
 
         // Clear session timeout
         if (sessionTimerHandle) {
@@ -546,7 +606,11 @@ After reading the full cue card exactly, tell the candidate they have one minute
         }
 
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            try { mediaRecorder.stop(); } catch (_) {}
+            try {
+                mediaRecorder.stop();
+            } catch {
+                void 0;
+            }
         }
 
         cleanupAudio();
@@ -556,7 +620,9 @@ After reading the full cue card exactly, tell the candidate they have one minute
                 if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
                     ws.close(1000, 'Session ended');
                 }
-            } catch (_) {}
+            } catch {
+                void 0;
+            }
             ws = null;
         }
 

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { createRealtimeSession } from '../../lib/realtimeSpeaking';
 import { evaluateTranscript, saveSpeakingSession } from '../../lib/speakingScorer';
 import { generateCueCardForTopic } from '../../lib/aiService';
-import { generateExaminerInstructions } from '../../lib/speakingInstructions';
+import { buildFallbackCueCard, createSpeakingSessionPlan } from '../../lib/speakingInstructions';
 import SpeakingPrepScreen from '../../components/SpeakingPrepScreen';
 import {
     Mic, MicOff, Play, Pause, Award, Clock, ChevronRight,
@@ -26,11 +26,9 @@ export default function SpeakingSimulatorBeta() {
     const [transcript, setTranscript] = useState([]);
     const [error, setError] = useState('');
     const [agentSpeaking, setAgentSpeaking] = useState(false);
+    const [stageNotice, setStageNotice] = useState('Examiner is preparing your test...');
     const [scoreReport, setScoreReport] = useState(null);
-    const [recordings, setRecordings] = useState(null);
     const [startedAt, setStartedAt] = useState(null);
-    const [completedAt, setCompletedAt] = useState(null);
-    const [sessionId, setSessionId] = useState(null);
 
     // Part 2 prep
     const [showPrepScreen, setShowPrepScreen] = useState(false);
@@ -47,8 +45,7 @@ export default function SpeakingSimulatorBeta() {
     const badgeTimerRef = useRef(null);
 
     // Audio playback
-    const [playingPart, setPlayingPart] = useState(null);
-    const audioRef = useRef(null);
+    const examinerWaveHeights = [24, 34, 28, 40, 30];
 
     // Session ref
     const sessionRef = useRef(null);
@@ -57,6 +54,11 @@ export default function SpeakingSimulatorBeta() {
 
     // Premium check
     const isPremium = organization?.is_premium === true;
+
+    const getTiming = useCallback((key, fallback) => {
+        const value = sessionPlanRef.current?.timing?.[key];
+        return typeof value === 'number' ? value : fallback;
+    }, []);
 
     const showBadge = (text) => {
         setStageBadgeText(text);
@@ -72,15 +74,18 @@ export default function SpeakingSimulatorBeta() {
 
         if (newStage === 'part1') {
             showBadge('Part 1: Introduction');
+            setStageNotice('Answer naturally and wait for one question at a time.');
         }
 
         if (newStage === 'part2_prep') {
             const plannedCueCard = sessionPlanRef.current?.cueCardText;
-            setCueCardText(plannedCueCard || 'Describe a memorable experience from your life.\n\nYou should say:\n• What the experience was\n• When it happened\n• Who was involved\n• And explain why it was memorable');
+            const prepSeconds = getTiming('part2PrepSeconds', 60);
+            setCueCardText(plannedCueCard || buildFallbackCueCard(sessionPlanRef.current?.part2Topic));
+            setStageNotice('Read the cue card carefully and make quick notes before you start speaking.');
 
             clearInterval(prepTimerRef.current);
             setShowPrepScreen(true);
-            setPrepTimeLeft(60);
+            setPrepTimeLeft(prepSeconds);
             prepTimerRef.current = setInterval(() => {
                 setPrepTimeLeft(prev => {
                     if (prev <= 1) {
@@ -98,7 +103,8 @@ export default function SpeakingSimulatorBeta() {
         if (newStage === 'part2') {
             clearInterval(prepTimerRef.current);
             setShowPrepScreen(false);
-            setSpeakTimeLeft(120);
+            setSpeakTimeLeft(getTiming('part2SpeakSeconds', 120));
+            setStageNotice('Speak continuously and naturally. You will only be prompted if you sound completely finished.');
             clearInterval(speakTimerRef.current);
             speakTimerRef.current = setInterval(() => {
                 setSpeakTimeLeft(prev => {
@@ -115,19 +121,22 @@ export default function SpeakingSimulatorBeta() {
 
         if (newStage === 'part2_followup') {
             clearInterval(speakTimerRef.current);
+            setStageNotice('Listen for one short follow-up question at a time, then answer fully.');
         }
 
         if (newStage === 'part3') {
             clearInterval(prepTimerRef.current);
             clearInterval(speakTimerRef.current);
             showBadge('Part 3: Discussion');
+            setStageNotice('Expect broader discussion questions. Take a moment to think, then answer clearly.');
         }
 
         if (newStage === 'finished') {
             clearInterval(prepTimerRef.current);
             clearInterval(speakTimerRef.current);
+            setStageNotice('Your speaking test is complete. Preparing your report...');
         }
-    }, []);
+    }, [getTiming]);
 
     const handleTranscriptUpdate = useCallback((entry) => {
         transcriptRef.current = [...transcriptRef.current, entry];
@@ -135,12 +144,8 @@ export default function SpeakingSimulatorBeta() {
     }, []);
 
     const handleSessionEnd = useCallback(async () => {
-        const endTime = new Date().toISOString();
-        setCompletedAt(endTime);
-
         // Get recordings
         const recs = sessionRef.current?.getRecordings();
-        setRecordings(recs);
 
         // Start scoring
         setStep('scoring');
@@ -151,17 +156,15 @@ export default function SpeakingSimulatorBeta() {
             setScoreReport(report);
 
             // Save to database with prep notes
-            const saved = await saveSpeakingSession({
+            await saveSpeakingSession({
                 studentId: profile.id,
                 organizationId: organization?.id,
                 transcript: fullTranscript,
                 scoreReport: report,
                 recordings: recs,
                 startedAt: startedAt,
-                completedAt: endTime,
                 prepNotes: notes, // Include prep notes
             });
-            setSessionId(saved?.id);
         } catch (err) {
             console.error('Scoring/save error:', err);
             setScoreReport({
@@ -188,27 +191,24 @@ export default function SpeakingSimulatorBeta() {
         setNotes('');
         setCueCardText('');
         setScoreReport(null);
-        setRecordings(null);
+        setStageNotice('Examiner is preparing your test...');
         setStartedAt(new Date().toISOString());
 
         try {
-            const sessionPlan = generateExaminerInstructions();
-            const { cueCardText: generatedCueCard } = await generateCueCardForTopic(sessionPlan.part2Topic.replace(/^Describe\s+/i, '').trim().length > 0
-                ? sessionPlan.part2Topic.replace(/^Describe\s+/i, '').trim().startsWith('a ') || sessionPlan.part2Topic.replace(/^Describe\s+/i, '').trim().startsWith('an ') || sessionPlan.part2Topic.replace(/^Describe\s+/i, '').trim().startsWith('your ')
-                    ? sessionPlan.part2Topic.replace(/^Describe\s+/i, '').trim()
-                    : sessionPlan.part2Topic
-                : sessionPlan.part2Topic);
-            sessionPlanRef.current = {
-                ...sessionPlan,
+            const draftPlan = createSpeakingSessionPlan();
+            const normalizedTopic = draftPlan.part2Topic.replace(/^Describe\s+/i, '').trim();
+            const cueTopic = normalizedTopic || draftPlan.part2Topic;
+            const { cueCardText: generatedCueCard } = await generateCueCardForTopic(cueTopic);
+            sessionPlanRef.current = createSpeakingSessionPlan({
+                part1Topics: draftPlan.part1Topics,
+                part2Topic: draftPlan.part2Topic,
+                part3Themes: draftPlan.part3Themes,
                 cueCardText: generatedCueCard,
-            };
-            setCueCardText(generatedCueCard);
+            });
+            setCueCardText(sessionPlanRef.current.cueCardText);
         } catch (err) {
             console.error('Failed to prepare session plan:', err);
-            sessionPlanRef.current = {
-                ...generateExaminerInstructions(),
-                cueCardText: 'Describe a memorable experience from your life.\n\nYou should say:\n• What the experience was\n• When it happened\n• Who was involved\n• And explain why it was memorable',
-            };
+            sessionPlanRef.current = createSpeakingSessionPlan();
             setCueCardText(sessionPlanRef.current.cueCardText);
         }
 
@@ -265,22 +265,6 @@ export default function SpeakingSimulatorBeta() {
     }, []);
 
     const formatTime = (secs) => `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`;
-
-    const playPartRecording = (partKey) => {
-        if (!recordings?.partRecordings?.[partKey]) return;
-        if (playingPart === partKey) {
-            audioRef.current?.pause();
-            setPlayingPart(null);
-            return;
-        }
-        const url = URL.createObjectURL(recordings.partRecordings[partKey]);
-        if (audioRef.current) {
-            audioRef.current.src = url;
-            audioRef.current.play();
-            setPlayingPart(partKey);
-            audioRef.current.onended = () => setPlayingPart(null);
-        }
-    };
 
     // ==================== START SCREEN ====================
     if (step === 'start') {
@@ -370,7 +354,7 @@ export default function SpeakingSimulatorBeta() {
             <div className="animate-fade-in" style={{ textAlign: 'center', padding: 'var(--space-16) 0' }}>
                 <div className="spinner spinner-lg" style={{ margin: '0 auto' }}></div>
                 <h3 style={{ marginTop: 'var(--space-6)' }}>Connecting to examiner...</h3>
-                <p className="text-muted">Setting up your microphone and AI examiner session</p>
+                <p className="text-muted">Setting up your microphone, cue card, and examiner session</p>
             </div>
         );
     }
@@ -428,6 +412,18 @@ export default function SpeakingSimulatorBeta() {
                             )}
                         </div>
 
+                        <div style={{
+                            padding: 'var(--space-3)',
+                            background: '#EEF2FF',
+                            borderRadius: 'var(--radius-md)',
+                            marginBottom: 'var(--space-4)',
+                            color: '#3730A3',
+                            fontSize: 'var(--text-sm)',
+                            lineHeight: 1.5,
+                        }}>
+                            {stageNotice}
+                        </div>
+
                         {/* Audio visualizer placeholder */}
                         <div style={{
                             height: 80, borderRadius: 'var(--radius-md)',
@@ -440,12 +436,12 @@ export default function SpeakingSimulatorBeta() {
                         }}>
                             {agentSpeaking ? (
                                 <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                                    {[...Array(5)].map((_, i) => (
+                                    {examinerWaveHeights.map((barHeight, i) => (
                                         <div key={i} style={{
                                             width: 4, borderRadius: 2,
                                             background: 'var(--color-primary)',
                                             animation: `soundwave 0.8s ease-in-out ${i * 0.1}s infinite alternate`,
-                                            height: `${20 + Math.random() * 30}px`,
+                                            height: `${barHeight}px`,
                                         }} />
                                     ))}
                                 </div>
@@ -527,8 +523,6 @@ export default function SpeakingSimulatorBeta() {
                     </div>
                 </div>
 
-                <audio ref={audioRef} style={{ display: 'none' }} />
-
                 <style>{`
                     @keyframes soundwave {
                         from { height: 8px; }
@@ -558,7 +552,6 @@ export default function SpeakingSimulatorBeta() {
     if (step === 'report') {
         const report = scoreReport || {};
         const sub = report.subScores || {};
-        const metrics = report.fluencyMetrics || {};
         const plan = report.practicePlan || [];
 
         const subScoreEntries = [
@@ -595,13 +588,13 @@ export default function SpeakingSimulatorBeta() {
 
                 {/* Sub-scores */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
-                    {subScoreEntries.map(({ key, label, icon: Icon }) => {
-                        const score = sub[key];
+                    {subScoreEntries.map((entry) => {
+                        const score = sub[entry.key];
                         return (
-                            <div key={key} className="card">
+                            <div key={entry.key} className="card">
                                 <div className="flex items-center gap-2" style={{ marginBottom: 'var(--space-3)' }}>
-                                    <Icon size={18} style={{ color: 'var(--color-primary)' }} />
-                                    <h4 className="text-sm font-semibold">{label}</h4>
+                                    <entry.icon size={18} style={{ color: 'var(--color-primary)' }} />
+                                    <h4 className="text-sm font-semibold">{entry.label}</h4>
                                 </div>
                                 <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 700, color: BAND_COLOR(score?.band) }}>
                                     {score?.band?.toFixed(1) || 'N/A'}

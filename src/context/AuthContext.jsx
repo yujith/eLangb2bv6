@@ -37,6 +37,12 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const refreshOrganization = async () => {
+        if (!user?.id) return null;
+        const profileData = await fetchProfile(user.id);
+        return profileData?.organizations || null;
+    };
+
     useEffect(() => {
         // Guard against double-init in React StrictMode / HMR
         if (initCalledRef.current) return;
@@ -144,6 +150,7 @@ export function AuthProvider({ children }) {
         loading,
         signIn,
         signOut,
+        refreshOrganization,
         isAuthenticated: !!user,
         role: profile?.role || null,
         isSuperAdmin: profile?.role === 'super_admin',

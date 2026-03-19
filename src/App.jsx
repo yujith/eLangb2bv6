@@ -17,6 +17,7 @@ import Billing from './pages/SuperAdmin/Billing';
 import OrgAdminDashboard from './pages/OrgAdmin/Dashboard';
 import OrgAdminUsers from './pages/OrgAdmin/Users';
 import Branding from './pages/OrgAdmin/Branding';
+import ListeningSettings from './pages/OrgAdmin/ListeningSettings';
 import Reports from './pages/OrgAdmin/Reports';
 import OrgAdminBilling from './pages/OrgAdmin/Billing';
 import OrgStudents from './pages/OrgAdmin/Students';
@@ -97,6 +98,7 @@ function AppRoutes() {
         <Route index element={<OrgAdminDashboard />} />
         <Route path="users" element={<OrgAdminUsers />} />
         <Route path="branding" element={<Branding />} />
+        <Route path="listening-settings" element={<ListeningSettings />} />
         <Route path="reports" element={<Reports />} />
         <Route path="billing" element={<OrgAdminBilling />} />
         <Route path="students" element={<OrgStudents />} />

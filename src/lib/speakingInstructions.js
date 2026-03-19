@@ -3,6 +3,14 @@
  * Used as the system prompt for the OpenAI Realtime API agent.
  */
 
+const DEFAULT_CUE_CARD = `Describe a memorable experience from your life.
+
+You should say:
+• What the experience was
+• When it happened
+• Who was involved
+• And explain why it was memorable`;
+
 // Topic pools for randomization
 const PART1_TOPIC_POOLS = [
     ['work or study', 'your hometown'],
@@ -76,16 +84,37 @@ function pickRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/**
- * Generate dynamic IELTS examiner instructions with randomized topics for each session.
- * @returns {{ instructions: string, part2Topic: string, part1Topics: string[], part3Themes: string[] }}
- */
-export function generateExaminerInstructions() {
-    const part1Pair = pickRandom(PART1_TOPIC_POOLS);
-    const part2Topic = pickRandom(PART2_TOPICS);
-    const part3Pair = pickRandom(PART3_THEME_POOLS);
+function sanitizeCueCardText(text, fallbackTopic) {
+    const cleaned = (text || '').replace(/\r/g, '').trim();
+    const lines = cleaned.split('\n').map(line => line.trimEnd());
+    const nonEmptyLines = lines.filter(Boolean);
+    const bulletLines = nonEmptyLines.filter(line => line.startsWith('•'));
+    const firstLine = nonEmptyLines[0] || '';
+    const hasDescribeHeading = /^describe\b/i.test(firstLine);
+    const hasCueHeading = nonEmptyLines.some(line => /^you should say:$/i.test(line));
+    const lastBullet = bulletLines[bulletLines.length - 1] || '';
 
-    const instructions = `You are a certified IELTS Speaking examiner conducting a full IELTS Speaking test. Follow these rules strictly:
+    if (hasDescribeHeading && hasCueHeading && bulletLines.length === 4 && /^•\s+and explain\b/i.test(lastBullet)) {
+        return nonEmptyLines.join('\n');
+    }
+
+    if (fallbackTopic) {
+        return buildFallbackCueCard(fallbackTopic);
+    }
+
+    return DEFAULT_CUE_CARD;
+}
+
+export function buildFallbackCueCard(topic) {
+    const normalizedTopic = (topic || '').replace(/^describe\s+/i, '').trim() || 'a memorable experience from your life';
+    const title = /^describe\b/i.test(normalizedTopic) ? normalizedTopic : `Describe ${normalizedTopic}`;
+    const subject = normalizedTopic.replace(/^[Aa]n?\s+/, '').replace(/^your\s+/i, 'your ').trim();
+
+    return `${title}\n\nYou should say:\n• What ${subject} was\n• When it happened\n• Who was involved\n• And explain why it was memorable`;
+}
+
+function buildSystemInstructions({ part1Topics, part2Topic, part3Themes, stagePrompts, timing }) {
+    return `You are a certified IELTS Speaking examiner conducting a full IELTS Speaking test. Follow these rules strictly:
 
 ROLE & BEHAVIOUR
 - You are a professional, neutral, and encouraging examiner.
@@ -98,56 +127,111 @@ ROLE & BEHAVIOUR
 TEST STRUCTURE
 You must follow this exact three-part structure:
 
-PART 1 — Introduction & Interview (4-5 minutes)
-- Begin with: "Good morning/afternoon. My name is Sarah. Can you tell me your full name, please?"
-- Then: "Can I see your identification, please? Thank you."
-- For this session, ask questions on these two topic areas: "${part1Pair[0]}" and "${part1Pair[1]}".
-- Ask 2-3 questions on each topic area (4-5 questions total).
-- Questions should be simple and conversational.
-- After completing Part 1, say: "Now I'd like to move on to Part 2."
+PART 1 — Introduction & Interview
+- Begin with this exact opening: "${stagePrompts.part1StartLine1}"
+- Then say: "${stagePrompts.part1StartLine2}"
+- For this session, ask questions on these two topic areas: "${part1Topics[0]}" and "${part1Topics[1]}".
+- Ask 2-3 questions on each topic area.
+- Questions should be simple, clear, and conversational.
+- When Part 1 is complete, transition with this exact sentence: "${stagePrompts.part2TransitionLine}"
 
-PART 2 — Individual Long Turn (3-4 minutes)
+PART 2 — Individual Long Turn
 - For this session, the cue card topic is: "${part2Topic}".
 - Do NOT invent, summarize, or paraphrase the cue card content in advance.
-- When Part 2 begins, the system will send you the exact cue card text to read aloud. Read that cue card exactly as provided, including each bullet point.
-- After reading the exact cue card, say: "You have one minute to prepare. You can make notes if you wish."
-- Then STOP SPEAKING. The system will manage the 60-second preparation timer.
-- When the system tells you prep time is over, say: "All right, please begin speaking."
-- Let the candidate speak for 1-2 minutes WITHOUT interruption. If they stop early, prompt: "Is there anything else you'd like to add?"
-- Do NOT move to Part 3 yet. Wait for the system to signal that speaking time is over.
-- When the system signals follow-up time, say "Thank you." Then ask 1-2 brief follow-up questions related to the topic.
-- IMPORTANT: After each follow-up question, WAIT at least 15-20 seconds for the candidate to respond fully. Do not rush. The candidate needs time to think and give a complete answer.
-- After the follow-up questions are done, transition by saying: "We'll now move on to Part 3."
+- When instructed to start Part 2, the system will send you the exact cue card text. Read that cue card exactly as provided, including every line and bullet point.
+- After reading the exact cue card, say exactly: "${stagePrompts.part2PrepIntroLine}"
+- Then STOP SPEAKING completely. The system will manage the ${Math.round(timing.part2PrepSeconds / 60)}-minute preparation timer.
+- When instructed that prep time is over, say exactly: "${stagePrompts.part2StartLine}"
+- Let the candidate speak for up to ${Math.round(timing.part2SpeakSeconds / 60)} minutes WITHOUT interruption.
+- If they appear fully finished before the time boundary, you may use exactly one gentle prompt: "${stagePrompts.part2PromptLine}"
+- Do NOT move to Part 3 until the system explicitly tells you to begin follow-up questions.
+- When follow-up begins, first say exactly: "${stagePrompts.part2FollowupIntroLine}"
+- Ask only one brief follow-up question at a time related to the Part 2 topic.
+- After each follow-up question, wait patiently for a full answer. Allow at least ${timing.followupWaitSecondsMin}-${timing.followupWaitSecondsMax} seconds before considering another prompt.
+- After the follow-up questions are complete, transition with this exact sentence: "${stagePrompts.part3TransitionLine}"
 
-PART 3 — Two-way Discussion (4-5 minutes)
-- For this session, discuss these abstract themes: "${part3Pair[0]}" and "${part3Pair[1]}".
-- Ask 4-5 abstract/analytical questions on these themes.
+PART 3 — Two-way Discussion
+- For this session, discuss these abstract themes: "${part3Themes[0]}" and "${part3Themes[1]}".
+- Ask 4-5 abstract or analytical questions across these themes.
+- Ask ONE question at a time and wait for the candidate's answer before asking the next question.
 - Questions should require opinion, analysis, comparison, or speculation.
-- Use follow-up prompts like "Why do you think that is?", "Can you give an example?", "How might this change in the future?"
-- After completing Part 3, say: "Thank you. That is the end of the speaking test."
+- Use short follow-up prompts like "Why do you think that is?", "Can you give an example?", or "How might this change in the future?"
+- If there is a short silence, remain patient and do not rush the candidate.
+- When the test is complete, end with this exact sentence: "${stagePrompts.finishedLine}"
 
 CRITICAL CONVERSATION RULES
 - Ask ONE question at a time. NEVER combine multiple questions in a single turn.
-- After asking a question, STOP and WAIT for the candidate to respond. Do not continue speaking until you hear from the candidate.
+- After asking a question, STOP and WAIT for the candidate to respond.
 - Do not answer your own questions or simulate the candidate's responses.
-- If there is silence, wait patiently — the candidate may be thinking. Do not fill the silence.
-- Give the candidate at least 10-15 seconds to begin answering before prompting them.
+- If there is silence, wait patiently — the candidate may be thinking.
+- Give the candidate ${timing.initialResponseWaitSecondsMin}-${timing.initialResponseWaitSecondsMax} seconds to begin answering before you consider a brief prompt.
+- Stay within the current part until the system instructs you to move on.
 
 IMPORTANT CONSTRAINTS
 - Your name is Sarah. Always introduce yourself as Sarah.
 - Never evaluate, score, or give feedback during the test.
 - Never say things like "That's a good answer" or "You could improve by..."
 - Stay in character as a neutral examiner throughout.
-- Keep track of which part you are in and transition naturally.
-- The entire test should take approximately 11-14 minutes.
-- For Part 2, after presenting the cue card, STOP SPEAKING completely. The system will manage the 60-second preparation timer and tell you when to resume.`;
+- The full test should feel efficient and natural.
+- During Part 2 prep, remain completely silent after reading the cue card and prep instruction.`;
+}
+
+export function createSpeakingSessionPlan({
+    part1Topics,
+    part2Topic,
+    part3Themes,
+    cueCardText,
+} = {}) {
+    const resolvedPart1Topics = Array.isArray(part1Topics) && part1Topics.length === 2 ? part1Topics : pickRandom(PART1_TOPIC_POOLS);
+    const resolvedPart2Topic = part2Topic || pickRandom(PART2_TOPICS);
+    const resolvedPart3Themes = Array.isArray(part3Themes) && part3Themes.length === 2 ? part3Themes : pickRandom(PART3_THEME_POOLS);
+    const resolvedCueCardText = sanitizeCueCardText(cueCardText, resolvedPart2Topic);
+    const timing = {
+        part2PrepSeconds: 60,
+        part2SpeakSeconds: 120,
+        initialResponseWaitSecondsMin: 10,
+        initialResponseWaitSecondsMax: 15,
+        followupWaitSecondsMin: 15,
+        followupWaitSecondsMax: 20,
+        realtimeVadSilenceMs: 5200,
+        introMicMuteMs: 1500,
+        agentMicReleaseDelayMs: 350,
+    };
+    const stagePrompts = {
+        part1StartLine1: 'Good morning. My name is Sarah. Can you tell me your full name, please?',
+        part1StartLine2: 'Can I see your identification, please? Thank you.',
+        part2TransitionLine: "Now I'd like to move on to Part 2.",
+        part2PrepIntroLine: 'You have one minute to prepare. You can make notes if you wish.',
+        part2StartLine: 'All right, please begin speaking.',
+        part2PromptLine: 'Is there anything else you would like to add?',
+        part2FollowupIntroLine: 'Thank you.',
+        part3TransitionLine: "We'll now move on to Part 3.",
+        finishedLine: 'Thank you. That is the end of the speaking test.',
+    };
 
     return {
-        instructions,
-        part2Topic,
-        part1Topics: part1Pair,
-        part3Themes: part3Pair,
+        part1Topics: resolvedPart1Topics,
+        part2Topic: resolvedPart2Topic,
+        part3Themes: resolvedPart3Themes,
+        cueCardText: resolvedCueCardText,
+        timing,
+        stagePrompts,
+        instructions: buildSystemInstructions({
+            part1Topics: resolvedPart1Topics,
+            part2Topic: resolvedPart2Topic,
+            part3Themes: resolvedPart3Themes,
+            stagePrompts,
+            timing,
+        }),
     };
+}
+
+/**
+ * Generate dynamic IELTS examiner instructions with randomized topics for each session.
+ * @returns {{ instructions: string, part2Topic: string, part1Topics: string[], part3Themes: string[] }}
+ */
+export function generateExaminerInstructions() {
+    return createSpeakingSessionPlan();
 }
 
 // Keep backward-compatible static export for existing SpeakingSimulator

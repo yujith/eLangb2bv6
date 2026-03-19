@@ -64,6 +64,7 @@ const navConfig = {
                 label: 'Settings',
                 items: [
                     { to: '/org-admin/branding', icon: Settings, label: 'Branding' },
+                    { to: '/org-admin/listening-settings', icon: Headphones, label: 'Listening Realism' },
                 ],
             },
         ],
